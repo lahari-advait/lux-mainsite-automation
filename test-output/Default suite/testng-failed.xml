@@ -3,23 +3,25 @@
 <suite name="Failed suite [Default suite]" guice-stage="DEVELOPMENT">
   <test thread-count="5" name="Default test(failed)">
     <classes>
-      <class name="org.example.tests.alldoctorsTest">
+      <class name="org.example.tests.allTreatmentsTest">
         <methods>
-          <include name="testDrSaiKishanSirasalaMethods"/>
-          <include name="testDrPPragniaMethods"/>
-          <include name="testDrRamPrabhuMethods"/>
-          <include name="testDrBathiniHitheshMethods"/>
-          <include name="testDrSamhithaAlukurMethods"/>
-          <include name="testdrAbhishekMethods"/>
+          <include name="gastroInflammatoryBowelDiseaseTest"/>
+          <include name="gastroChronicConstipationTest"/>
+          <include name="testProctologyPilesMethods"/>
+          <include name="proctologyAnalPolypRemovalTest"/>
+          <include name="testproctologyAnalFissureMethods"/>
+          <include name="proctologyFecalIncontinenceTest"/>
+          <include name="proctologyAnalFissureMethods"/>
+          <include name="proctologyPerianalAbscessMethods"/>
+          <include name="setUpTreatmentsHandler"/>
+          <include name="testproctologyAnalFistulaMethods"/>
+          <include name="proctologyPilonidalSinusTest"/>
           <include name="setUp"/>
-          <include name="testDtKruthiGoudMethods"/>
-          <include name="testDrHarshitaKakarlaMethods"/>
-          <include name="setUpDoctorsHandler"/>
-          <include name="testDrMadhanMohanMethods"/>
-          <include name="testDrChandanaGuduruMethods"/>
-          <include name="testDrPriyankSalechaMethods"/>
+          <include name="gastroUlcerativeColitisTest"/>
+          <include name="gastroIrritableBowelSyndromeTest"/>
+          <include name="gynPelvicFloorDysfunctionTest"/>
         </methods>
-      </class> <!-- org.example.tests.alldoctorsTest -->
+      </class> <!-- org.example.tests.allTreatmentsTest -->
     </classes>
   </test> <!-- Default test(failed) -->
 </suite> <!-- Failed suite [Default suite] -->

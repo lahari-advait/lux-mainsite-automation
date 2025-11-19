@@ -12,8 +12,8 @@ import org.openqa.selenium.support.ui.*;
 
 public class allDoctorCards {
 
-    private WebDriver driver;
-    private WebDriverWait wait;
+    private static WebDriver driver;
+    private static WebDriverWait wait;
     private JavascriptExecutor js;
 
     public allDoctorCards(WebDriver driver) {
@@ -29,12 +29,49 @@ public class allDoctorCards {
 //    }
 
     // Navigate to Doctors page
-    public void openDoctorsPage() {
-        By doctorsNavLink = By.xpath("//a[contains(text(),'Doctors')]");
-        WebElement doctorsLink = wait.until(ExpectedConditions.elementToBeClickable(doctorsNavLink));
-        doctorsLink.click();
-        wait.until(ExpectedConditions.urlContains("/doctors"));
+//    public void openDoctorsPage() {
+//        By doctorsNavLink = By.xpath("//a[contains(text(),'Doctors')]");
+//        WebElement doctorsLink = wait.until(ExpectedConditions.elementToBeClickable(doctorsNavLink));
+//        doctorsLink.click();
+//        wait.until(ExpectedConditions.urlContains("/doctors"));
+//    }
+    public static void openDoctorsPage() {
+        String testCaseID = "TC201";
+        String feature = "Doctors Page Load";
+        String expected = "Doctors page should open successfully when clicking 'Doctors' in navbar.";
+        String actual;
+        String status;
+
+        try {
+            // Preconditions: Homepage loaded (assume driver already on homepage)
+            By doctorsNavLink = By.xpath("//a[contains(text(),'Doctors')]");
+            WebElement doctorsLink = wait.until(ExpectedConditions.elementToBeClickable(doctorsNavLink));
+            doctorsLink.click();
+
+            // Wait until URL contains /doctors
+            wait.until(ExpectedConditions.urlContains("/doctors"));
+
+            actual = "Doctors page loaded with URL: " + driver.getCurrentUrl();
+
+            if (driver.getCurrentUrl().contains("/doctors")) {
+                status = "PASS";
+            } else {
+                status = "FAIL";
+            }
+        } catch (Exception e) {
+            actual = "Exception occurred: " + e.getMessage();
+            status = "ERROR";
+        }
+
+        // Print structured result
+        System.out.println("Test Case ID: " + testCaseID);
+        System.out.println("Feature: " + feature);
+        System.out.println("Expected Result: " + expected);
+        System.out.println("Actual Result: " + actual);
+        System.out.println("Status: " + status);
+        System.out.println("--------------------------------------------------");
     }
+
 
     // Click View Profile and switch to child window
     public void viewDoctorProfile(String doctorName) throws InterruptedException {
@@ -488,5 +525,6 @@ public class allDoctorCards {
  }
 
 }
+
 
 

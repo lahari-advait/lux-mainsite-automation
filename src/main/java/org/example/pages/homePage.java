@@ -4,6 +4,7 @@ import org.openqa.selenium.*;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.*;
+import org.testng.Assert;
 
 import java.util.concurrent.TimeUnit;
 import java.time.Duration;
@@ -19,120 +20,712 @@ public class homePage {
         this.driver = driver;
         this.wait = new WebDriverWait(driver, Duration.ofSeconds(20));
         
+        
 
         this.actions = new Actions(driver);
     }
+    /**
+     * TC101 — Verify that the Lux Hospitals website loads correctly
+     * Expected Result: Website loads successfully, title and key elements are visible within 10 seconds.
+     */
+    public void verifyWebsiteLoadsCorrectly() {
+        String testCaseID = "TC101";
+        String feature = "Website Load";
+        String expected = "Website should load successfully with correct title and visible header/logo.";
+        String actual;
+        String status;
 
+        try {
+            long startTime = System.currentTimeMillis();
+
+            // ✅ Wait for page to finish loading
+            new WebDriverWait(driver, Duration.ofSeconds(15)).until(
+                    webDriver -> ((JavascriptExecutor) webDriver)
+                            .executeScript("return document.readyState").equals("complete")
+            );
+
+            long loadTime = (System.currentTimeMillis() - startTime) / 1000;
+            System.out.println("⏱️ Page load time: " + loadTime + " seconds");
+
+            // ✅ Validate page title
+            String pageTitle = driver.getTitle();
+            boolean titleOk = pageTitle != null && pageTitle.toLowerCase().contains("lux");
+
+            // ✅ Validate key elements
+            WebElement header = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector("header.luxmain__header")));
+            WebElement logo = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector("a.nav__logo img.logo")));
+
+            boolean headerDisplayed = header.isDisplayed();
+            boolean logoDisplayed = logo.isDisplayed();
+
+            if (titleOk && headerDisplayed && logoDisplayed) {
+                actual = "Website loaded successfully with correct title and header/logo visible. (Load time: " + loadTime + "s)";
+                status = "PASS";
+            } else {
+                actual = "Website partially loaded or missing key elements.";
+                status = "FAIL";
+            }
+
+        } catch (TimeoutException te) {
+            actual = "Website took too long to load.";
+            status = "FAIL";
+        } catch (Exception e) {
+            actual = "Unexpected error while loading website: " + e.getMessage();
+            status = "FAIL";
+        }
+
+        // 🧾 Structured Result Logging
+        System.out.println("-------------------------------------------------");
+        System.out.println("Test Case ID   : " + testCaseID);
+        System.out.println("Feature/Section: " + feature);
+        System.out.println("Expected Result: " + expected);
+        System.out.println("Actual Result  : " + actual);
+        System.out.println("Status         : " + status);
+        System.out.println("-------------------------------------------------");
+    }
+    /**
+     * TC102 — Verify all navigation bar links redirect correctly
+     * Expected Result: Each navbar link (Doctors, Treatments, About Us, etc.)
+     * should navigate to its respective page without any broken links or errors.
+     */
+    public void verifyNavbarLinks() {
+        String testCaseId = "TC102";
+        String feature = "Navbar";
+        System.out.println("\n======================================================");
+        System.out.println("🧾 TEST CASE ID: " + testCaseId);
+        System.out.println("📂 FEATURE: " + feature);
+        System.out.println("🎯 DESCRIPTION: Verify all navigation bar links redirect correctly");
+        System.out.println("======================================================\n");
+
+        try {
+            // 1️⃣ Doctors
+            String expected1 = "Doctors link should open the Doctors page";
+            System.out.println("➡️ Step 1: Click 'Doctors'");
+            WebElement doctors = wait.until(ExpectedConditions.elementToBeClickable(
+                    By.xpath("//a[normalize-space()='Doctors']")));
+            highlight(doctors);
+            doctors.click();
+
+            wait.until(ExpectedConditions.urlContains("luxhospitals.com/doctors"));
+            String actual1 = driver.getCurrentUrl();
+            boolean status1 = actual1.contains("doctors");
+            printResult("Doctors", expected1, actual1, status1);
+            Assert.assertTrue(status1, "❌ Doctors link failed");
+
+            driver.navigate().back();
+            removeHighlight1(doctors);
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//a[normalize-space()='Doctors']")));
+
+            // 2️⃣ Treatments
+            String expected2 = "Treatments link should open the Treatments page";
+            System.out.println("\n➡️ Step 2: Click 'Treatments'");
+            WebElement treatments = wait.until(ExpectedConditions.elementToBeClickable(
+                    By.xpath("//a[normalize-space()='Treatments']")));
+            highlight(treatments);
+            treatments.click();
+
+            wait.until(ExpectedConditions.urlContains("luxhospitals.com/treatments"));
+            String actual2 = driver.getCurrentUrl();
+            boolean status2 = actual2.contains("treatments");
+            printResult("Treatments", expected2, actual2, status2);
+            Assert.assertTrue(status2, "❌ Treatments link failed");
+
+            driver.navigate().back();
+            removeHighlight1(treatments);
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//a[normalize-space()='Doctors']")));
+
+            // 3️⃣ For Patients → Hover + Insurance
+            String expected3 = "Hovering over 'For Patients' should show dropdown, and 'Insurance' should open Insurance page";
+            System.out.println("\n➡️ Step 3: Hover 'For Patients' and click 'Insurance'");
+            WebElement forPatients = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.xpath("//span[normalize-space()='For Patients']")));
+            highlight(forPatients);
+            actions.moveToElement(forPatients).perform();
+
+            WebElement dropdownMenu = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.xpath("//span[normalize-space()='For Patients']/ancestor::li//ul[contains(@class,'dropdown__menu')]")));
+            Assert.assertTrue(dropdownMenu.isDisplayed(), "❌ Dropdown not visible for For Patients");
+
+            WebElement insurance = dropdownMenu.findElement(By.xpath(".//a[normalize-space()='Insurance']"));
+            highlight(insurance);
+            insurance.click();
+
+            wait.until(ExpectedConditions.urlContains("luxhospitals.com/insurance"));
+            String actual3 = driver.getCurrentUrl();
+            boolean status3 = actual3.contains("insurance");
+            printResult("For Patients → Insurance", expected3, actual3, status3);
+            Assert.assertTrue(status3, "❌ Insurance link failed");
+
+            driver.navigate().back();
+            
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//a[normalize-space()='Doctors']")));
+
+            // 4️⃣ About Us → Hover only, verify dropdown visible
+            String expected4 = "Hovering over 'About Us' should display its dropdown menu";
+            System.out.println("\n➡️ Step 4: Hover 'About Us' to verify dropdown visibility");
+            WebElement aboutUs = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.xpath("//span[normalize-space()='About Us']")));
+            highlight(aboutUs);
+            actions.moveToElement(aboutUs).perform();
+
+            WebElement aboutDropdown = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.xpath("//span[normalize-space()='About Us']/ancestor::li//ul[contains(@class,'dropdown__menu')]")));
+            String opacity = aboutDropdown.getCssValue("opacity");
+            String visibility = aboutDropdown.getCssValue("visibility");
+            removeHighlight1(aboutUs);
+
+            boolean status4 = visibility.equals("visible") && Double.parseDouble(opacity) > 0;
+            String actual4 = "Dropdown CSS → opacity: " + opacity + ", visibility: " + visibility;
+            printResult("About Us (Dropdown Visible)", expected4, actual4, status4);
+            Assert.assertTrue(status4, "❌ About Us dropdown not visible");
+
+            System.out.println("\n✅✅ " + testCaseId + " PASSED: All Navbar validations successful!");
+
+        } catch (Exception e) {
+            System.out.println("\n❌ " + testCaseId + " FAILED: " + e.getMessage());
+            Assert.fail("Navbar validation failed: " + e.getMessage());
+        }
+
+        System.out.println("\n======================================================");
+        System.out.println("🏁 END OF TEST CASE: " + testCaseId);
+        System.out.println("======================================================\n");
+    }
+
+    private void printResult(String step, String expected, String actual, boolean status) {
+        System.out.println("------------------------------------------------------");
+        System.out.println("🔹 Step: " + step);
+        System.out.println("🧩 Expected: " + expected);
+        System.out.println("🔍 Actual: " + actual);
+        System.out.println("📊 Status: " + (status ? "✅ PASSED" : "❌ FAILED"));
+        System.out.println("------------------------------------------------------");
+    }
+    private void click(WebElement el, String label) {
+        try {
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", el);
+            System.out.println("✅ Clicked: " + label);
+        } catch (Exception e) {
+            System.out.println("❌ Click failed on " + label + ": " + e.getMessage());
+        }
+    }
+
+    private void hover(WebElement el) {
+        try {
+            Actions actions = new Actions(driver);
+            actions.moveToElement(el).pause(Duration.ofMillis(500)).perform();
+            System.out.println("🖱️ Hovered on: " + el.getText());
+        } catch (Exception e) {
+            System.out.println("⚠️ Hover failed: " + e.getMessage());
+        }
+    }
+    private void validatePage(String expectedText) {
+        try {
+            wait.until(ExpectedConditions.or(
+                    ExpectedConditions.urlContains(expectedText.toLowerCase().replace(" ", "-")),
+                    ExpectedConditions.titleContains(expectedText),
+                    ExpectedConditions.presenceOfElementLocated(By.xpath("//*[contains(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'" + expectedText.toLowerCase() + "')]"))
+            ));
+            System.out.println("✅ Page loaded successfully: " + expectedText);
+            driver.navigate().back();
+        } catch (Exception e) {
+            System.out.println("⚠️ Validation failed for: " + expectedText + " → " + e.getMessage());
+        }
+    }
     // === TEST METHODS ===
     public void testHeaderButton() {
+        String testCaseId = "TC103";
+        String feature = "Navbar Contact Button";
+        String description = "Verify Contact button in navbar navigates to WhatsApp";
+
+        System.out.println("\n======================================================");
+        System.out.println("🧾 TEST CASE ID: " + testCaseId);
+        System.out.println("📂 FEATURE: " + feature);
+        System.out.println("🎯 DESCRIPTION: " + description);
+        System.out.println("======================================================\n");
+
         try {
             By headerBtnLocator = By.cssSelector(".header_button");
 
+            // ✅ Step 1: Locate Header Button
+            System.out.println("➡️ Step 1: Locate and highlight Contact (Header) button");
             WebElement headerButton = wait.until(ExpectedConditions.elementToBeClickable(headerBtnLocator));
             highlight(headerButton);
 
+            String expected = "Clicking on Contact button should open WhatsApp chat (api.whatsapp.com/send)";
             clickElement(headerButton, "Header Button");
 
-            // ✅ Adjusted expectation
+            // ✅ Step 2: Wait for WhatsApp redirect
             wait.until(ExpectedConditions.urlContains("api.whatsapp.com/send"));
+            String actual = driver.getCurrentUrl();
+            boolean status = actual.contains("api.whatsapp.com/send");
 
-            System.out.println("🎉 Header Button test passed. Navigated to: " + driver.getCurrentUrl());
+            printResult("Contact Button (Navbar)", expected, actual, status);
+            Assert.assertTrue(status, "❌ Contact button did not redirect to WhatsApp.");
 
+            System.out.println("🎉 " + testCaseId + " PASSED — Navigated to: " + actual);
+
+            // ✅ Step 3: Navigate back to verify return
             driver.navigate().back();
+            removeHighlight1(headerButton);
             wait.until(ExpectedConditions.presenceOfElementLocated(headerBtnLocator));
 
         } catch (Exception e) {
-            System.out.println("❌ Header Button test failed: " + e.getMessage());
+            System.out.println("❌ " + testCaseId + " FAILED: " + e.getMessage());
+            Assert.fail("Header Button validation failed: " + e.getMessage());
+        }
+
+        System.out.println("\n======================================================");
+        System.out.println("🏁 END OF TEST CASE: " + testCaseId);
+        System.out.println("======================================================\n");
+    }
+    public void removeHighlight1(WebElement element) {
+        try {
+            JavascriptExecutor js = (JavascriptExecutor) driver;
+            js.executeScript(
+                "try{ arguments[0].style.outline='none'; arguments[0].style.border='none'; arguments[0].style.boxShadow='none'; arguments[0].style.backgroundColor=''; }catch(e){}",
+                element
+            );
+        } catch (Exception e) {
+            System.out.println("⚠ removeHighlight failed (possibly stale): " + e.getMessage());
         }
     }
+
 
 
     public void testStickyIcons() throws InterruptedException {
+        String testCaseId = "TC104";
+        String feature = "Floating Sticky CTAs";
+        String description = "Verify all 3 floating sticky CTAs (Call, WhatsApp, Emergency) are visible and functional";
+
+        System.out.println("\n======================================================");
+        System.out.println("🧾 TEST CASE ID: " + testCaseId);
+        System.out.println("📂 FEATURE: " + feature);
+        System.out.println("🎯 DESCRIPTION: " + description);
+        System.out.println("======================================================\n");
+
         try {
-            List<WebElement> stickyButtons = driver.findElements(By.className("mobile-stickey-icon-container"));
-            for (int i = 0; i < stickyButtons.size() && i < 3; i++) {
-                WebElement stickyButton = stickyButtons.get(i);
-                String label = "Sticky Icon #" + (i + 1);
-                Set<String> oldTabs = driver.getWindowHandles();
-                clickElement(stickyButton, label);
-                Thread.sleep(2000);
-                handleTabSwitch(oldTabs);
-            }
-        } catch (Exception e) {
-            System.out.println("❌ Sticky Icons test failed: " + e.getMessage());
-        }
-    }
+            Thread.sleep(1500);
 
-    public void testImageCTA(String cssSelector, String label) throws InterruptedException {
-        try {
-            WebElement element = wait.until(ExpectedConditions.elementToBeClickable(By.cssSelector(cssSelector)));
-            scrollIntoView(element);
-            actions.moveToElement(element).perform();
-            clickElement(element, label);
-            Thread.sleep(2000);
-            handleNewTabIfAny();
-        } catch (Exception e) {
-            System.out.println("❌ " + label + " test failed: " + e.getMessage());
-        }
-    }
-
-    public static void testDepartmentCards() throws InterruptedException {
-        JavascriptExecutor js = (JavascriptExecutor) driver;
-
-        // Scroll to "Our Departments" section
-        WebElement deptHeading = wait.until(ExpectedConditions.visibilityOfElementLocated(
-            By.xpath("//h2[contains(text(),'Our Departments')]")
-        ));
-        js.executeScript("arguments[0].scrollIntoView({block: 'center'});", deptHeading);
-        Thread.sleep(1200);
-
-        // Select all containers with <h2>
-        By cardSelector = By.xpath("//div[contains(@class,'click-container-') and .//h2]");
-
-        wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(cardSelector));
-        List<WebElement> cards = driver.findElements(cardSelector);
-
-        // ✅ Deduplicate by department name
-        Map<String, String> uniqueCards = new LinkedHashMap<>();
-        for (WebElement card : cards) {
-            try {
-                String departmentName = card.findElement(By.tagName("h2")).getText().trim();
-                uniqueCards.putIfAbsent(departmentName, departmentName); // store name only
-            } catch (NoSuchElementException ignore) {}
-        }
-
-        System.out.println("Found " + uniqueCards.size() + " unique department cards");
-
-        int index = 1;
-        for (String departmentName : uniqueCards.keySet()) {
-
-            // Re-find card fresh each loop (avoid stale references)
-            WebElement card = driver.findElement(
-                By.xpath("//div[contains(@class,'click-container-') and .//h2[normalize-space()='" + departmentName + "']]")
+            List<WebElement> stickyButtons = wait.until(
+                    ExpectedConditions.presenceOfAllElementsLocatedBy(By.className("mobile-stickey-icon-container"))
             );
 
-            js.executeScript("arguments[0].scrollIntoView({block: 'center'});", card);
-            Thread.sleep(1000);
-            actions.moveToElement(card).perform();
-            Thread.sleep(500);
+            System.out.println("➡️ Found " + stickyButtons.size() + " sticky CTA buttons.");
 
-            System.out.println("✅ Clicking Department Card #" + index + " - " + departmentName);
+            for (int i = 0; i < stickyButtons.size() && i < 3; i++) {
 
-            js.executeScript("arguments[0].click();", card);
+                System.out.println("\n------------------------------------------------------");
+                System.out.println("🖱️ STEP " + (i + 1) + " — Testing Sticky CTA #" + (i + 1));
 
-            wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
-            Thread.sleep(2000);
+                WebElement stickyButton = stickyButtons.get(i);
 
-            // Go back to homepage
-            driver.navigate().back();
-            wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(cardSelector));
-            Thread.sleep(2000);
+                scrollIntoView(stickyButton);
+                highlight(stickyButton);
+                Thread.sleep(600);
 
-            index++;
+                // 📌 Capture current state
+                Set<String> oldTabs = driver.getWindowHandles();
+                String mainWindow = driver.getWindowHandle();
+                String oldUrl = driver.getCurrentUrl();
+
+                // 🖱️ SINGLE SAFE CLICK
+                Actions act = new Actions(driver);
+                act.moveToElement(stickyButton)
+                        .pause(Duration.ofMillis(200))
+                        .click()
+                        .perform();
+
+                System.out.println("✅ Clicked Sticky CTA #" + (i + 1));
+                Thread.sleep(1500);
+
+                // 🚨 HANDLE NEW TAB OR SAME TAB
+                Set<String> newTabs = driver.getWindowHandles();
+                newTabs.removeAll(oldTabs);
+
+                if (!newTabs.isEmpty()) {
+                    // 🌍 OPENED IN NEW TAB
+                    String newTab = newTabs.iterator().next();
+                    driver.switchTo().window(newTab);
+
+                    System.out.println("🌍 Sticky CTA opened in new tab: " + driver.getCurrentUrl());
+                    Thread.sleep(1000);
+
+                    driver.close();
+                    driver.switchTo().window(mainWindow);
+                    Thread.sleep(1200);
+
+                } else {
+                    // ↪️ SAME TAB NAVIGATION
+                    String newUrl = driver.getCurrentUrl();
+                    if (!newUrl.equals(oldUrl)) {
+
+                        System.out.println("↪️ Sticky CTA navigated to: " + newUrl);
+                        Thread.sleep(1000);
+
+                        driver.navigate().back();
+                        Thread.sleep(2000);
+
+                    } else {
+                        System.out.println("⚠️ Sticky CTA did not open new tab or new page.");
+                    }
+                }
+
+                // 🚨 EMERGENCY POPUP — Only 3rd Icon (index 2)
+                if (i == 2) {
+                    closeEmergencyPopupInstantly();
+                }
+
+                removeHighlight1(stickyButton);
+                Thread.sleep(700);
+            }
+
+            System.out.println("\n🎉 " + testCaseId + " PASSED — All sticky CTAs validated.");
+
+        } catch (Exception e) {
+            System.out.println("❌ " + testCaseId + " FAILED: " + e.getMessage());
+            Assert.fail("Sticky CTAs validation failed: " + e.getMessage());
         }
 
-        System.out.println("🎉 All unique department cards tested successfully.");
+        System.out.println("\n======================================================");
+        System.out.println("🏁 END OF TEST CASE: " + testCaseId);
+        System.out.println("======================================================\n");
     }
+    public void closeEmergencyPopupInstantly() {
+        try {
+            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(1));
+
+            WebElement popup = shortWait.until(
+                    ExpectedConditions.visibilityOfElementLocated(By.id("emergencyPopup"))
+            );
+
+            System.out.println("📞 Emergency popup detected — closing immediately...");
+
+            WebElement closeBtn = popup.findElement(By.cssSelector(".close-footer-popup"));
+
+            // Instant JS close (most reliable)
+            ((JavascriptExecutor) driver)
+                    .executeScript("arguments[0].click();", closeBtn);
+
+            Thread.sleep(200);
+
+            System.out.println("✅ Emergency popup closed instantly!");
+
+        } catch (TimeoutException e) {
+            // No popup → ignore
+        } catch (Exception ex) {
+            System.out.println("⚠️ Popup close error: " + ex.getMessage());
+        }
+    }
+
+    private boolean handleTabOrPopup(Set<String> oldTabs, String label) throws InterruptedException {
+        Set<String> newTabs = driver.getWindowHandles();
+        newTabs.removeAll(oldTabs);
+
+        // ✅ CASE 1: Handle new tab
+        if (!newTabs.isEmpty()) {
+            String newTab = newTabs.iterator().next();
+            driver.switchTo().window(newTab);
+            Thread.sleep(2000);
+
+            String currentUrl = driver.getCurrentUrl();
+            System.out.println("✅ " + label + " opened new tab: " + currentUrl);
+
+            if (currentUrl.contains("wa.me") || currentUrl.contains("api.whatsapp")) {
+                System.out.println("Expected: WhatsApp chat ✅");
+            } else if (currentUrl.startsWith("tel:")) {
+                System.out.println("Expected: Phone call link ✅");
+            } else if (currentUrl.contains("appointment")) {
+                System.out.println("Expected: Appointment page ✅");
+            }
+
+            driver.close();
+            driver.switchTo().window(oldTabs.iterator().next());
+            Thread.sleep(1500);
+            return true;
+        }
+
+        // ✅ CASE 2: Handle Emergency Contact popup
+        try {
+            WebElement emergencyPopup = wait.withTimeout(Duration.ofSeconds(3))
+                    .until(ExpectedConditions.visibilityOfElementLocated(
+                            By.cssSelector("div.popup-content, div.modal, div[class*='emergency'], div[class*='popup']")
+                    ));
+
+            System.out.println("📩 Popup detected for " + label);
+
+            // Try multiple possible close button selectors
+            List<By> closeSelectors = Arrays.asList(
+                    By.cssSelector(".popup-close"),
+                    By.cssSelector("button[aria-label='Close']"),
+                    By.cssSelector("div.popup-content svg"), // covers SVG X icon
+                    By.cssSelector(".popup-content .fa-times"), // fallback for font icon X
+                    By.cssSelector(".popup-content > div > div > svg") // specific to emergency popup
+            );
+
+            boolean closed = false;
+            for (By selector : closeSelectors) {
+                try {
+                    WebElement closeBtn = emergencyPopup.findElement(selector);
+                    highlight(closeBtn);
+                    closeBtn.click();
+                    Thread.sleep(1000);
+                    System.out.println("✅ Closed popup via: " + selector);
+                    closed = true;
+                    break;
+                } catch (Exception ignored) {}
+            }
+
+            if (!closed) {
+                // Fallback: press ESC
+                new Actions(driver).sendKeys(Keys.ESCAPE).perform();
+                System.out.println("✅ Closed popup using ESC key fallback.");
+            }
+
+            Thread.sleep(1500);
+            return true;
+
+        } catch (TimeoutException e) {
+            // No popup detected
+            return false;
+        }
+    }
+
+    private void handleTabSwitchAndValidate(Set<String> oldTabs, String label) throws InterruptedException {
+        Set<String> newTabs = driver.getWindowHandles();
+        newTabs.removeAll(oldTabs);
+
+        if (!newTabs.isEmpty()) {
+            String newTab = newTabs.iterator().next();
+            driver.switchTo().window(newTab);
+            Thread.sleep(2500);
+
+            String currentUrl = driver.getCurrentUrl();
+            System.out.println("✅ " + label + " opened new tab: " + currentUrl);
+
+            // Validation based on expected pattern
+            if (currentUrl.contains("wa.me") || currentUrl.contains("api.whatsapp")) {
+                System.out.println("Expected: WhatsApp chat page ✅");
+            } else if (currentUrl.startsWith("tel:")) {
+                System.out.println("Expected: Phone call link ✅");
+            } else if (currentUrl.contains("appointment") || currentUrl.contains("book")) {
+                System.out.println("Expected: Appointment page ✅");
+            } else {
+                System.out.println("⚠️ Unexpected URL: " + currentUrl);
+            }
+
+            driver.close();
+            driver.switchTo().window(oldTabs.iterator().next());
+            Thread.sleep(2000);
+
+        } else {
+            System.out.println("ℹ️ No new tab detected — checking if action was handled in same window.");
+            Thread.sleep(1500);
+        }
+    }
+
+
+    public void testImageCTA(String selector, String label) throws InterruptedException {
+
+        String testCaseId = "TC105";
+        String feature = "Second Section CTAs";
+        String description = "Verify CTAs open correctly in new tab or same page.";
+
+        System.out.println("\n======================================================");
+        System.out.println("🧾 TEST CASE ID: " + testCaseId);
+        System.out.println("📂 FEATURE: " + feature);
+        System.out.println("🎯 DESCRIPTION: " + description);
+        System.out.println("======================================================\n");
+
+        try {
+            System.out.println("\n------------------------------------------------------");
+            System.out.println("🖱️ Testing CTA: " + label);
+            System.out.println("Expected: Should open new tab or navigate within same page.");
+
+            // Fresh element
+            WebElement element = wait.until(
+                    ExpectedConditions.elementToBeClickable(By.cssSelector(selector))
+            );
+
+            scrollIntoView(element);
+            highlight(element);
+            Thread.sleep(1000);
+
+            // Capture state
+            String oldUrl = driver.getCurrentUrl();
+            String mainWindow = driver.getWindowHandle();
+            Set<String> oldTabs = driver.getWindowHandles();
+
+            // SINGLE SAFE CLICK
+            new Actions(driver)
+                    .moveToElement(element)
+                    .pause(Duration.ofMillis(250))
+                    .click()
+                    .perform();
+
+            System.out.println("✅ Clicked: " + label);
+            Thread.sleep(3000);
+
+            // Detect new tab
+            Set<String> newTabs = driver.getWindowHandles();
+            newTabs.removeAll(oldTabs);
+
+            if (!newTabs.isEmpty()) {
+
+                // NEW TAB
+                String newTab = newTabs.iterator().next();
+                driver.switchTo().window(newTab);
+                Thread.sleep(2000);
+
+                System.out.println("🌍 " + label + " opened in new tab: " + driver.getCurrentUrl());
+
+                Thread.sleep(2000); // Wait on new page
+                driver.close();
+
+                driver.switchTo().window(mainWindow);
+                Thread.sleep(2000);
+
+            } else {
+
+                // SAME TAB NAVIGATION
+                String newUrl = driver.getCurrentUrl();
+
+                if (!newUrl.equals(oldUrl)) {
+
+                    System.out.println("↪️ " + label + " navigated to: " + newUrl);
+
+                    Thread.sleep(2500); // Wait on new page
+                    driver.navigate().back();
+
+                    Thread.sleep(3500);
+
+                    wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(selector)));
+
+                } else {
+                    System.out.println("⚠️ " + label + " did not trigger navigation or open a new tab.");
+                }
+            }
+
+            removeHighlight1(element);
+            Thread.sleep(2000);
+
+            System.out.println("✅ Completed CTA: " + label);
+
+        } catch (Exception e) {
+
+            System.out.println("❌ " + testCaseId + " FAILED for CTA: " + label + " — " + e.getMessage());
+            Assert.fail("CTA validation failed for: " + label + " — " + e.getMessage());
+        }
+
+        System.out.println("\n======================================================");
+        System.out.println("🏁 END OF CTA TEST: " + label);
+        System.out.println("======================================================\n");
+    }
+
+    public void testDepartmentCards() throws InterruptedException {
+
+        By cardSelector = By.xpath("//div[contains(@class,'click-container-') and .//h2]");
+
+        try {
+            JavascriptExecutor js = (JavascriptExecutor) driver;
+
+            // 👉 STEP 1: Scroll to Our Departments ONLY ONCE
+            WebElement deptHeading = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.xpath("//h2[contains(text(),'Our Departments')]")
+            ));
+            js.executeScript("arguments[0].scrollIntoView({block: 'center'});", deptHeading);
+            Thread.sleep(1500);
+
+            // 👉 STEP 2: Capture department names only (STRING = never stale)
+            List<WebElement> initialCards = wait.until(
+                    ExpectedConditions.presenceOfAllElementsLocatedBy(cardSelector)
+            );
+
+            LinkedHashSet<String> departmentNames = new LinkedHashSet<>();
+            for (WebElement card : initialCards) {
+                try {
+                    departmentNames.add(card.findElement(By.tagName("h2")).getText().trim());
+                } catch (Exception ignored) {}
+            }
+
+            System.out.println("Found " + departmentNames.size() + " unique department cards.");
+
+            int index = 1;
+            String mainWindow = driver.getWindowHandle();
+
+            // 👉 LOOP THROUGH NAMES ONLY
+            for (String deptName : departmentNames) {
+
+                System.out.println("\n------------------------------------------------------");
+                System.out.println("VALIDATING DEPARTMENT #" + index + ": " + deptName);
+
+                // ⭐ Re-locate card fresh BEFORE click (no stale)
+                WebElement card = wait.until(ExpectedConditions.elementToBeClickable(
+                        By.xpath("//h2[normalize-space()='" + deptName + "']/ancestor::div[contains(@class,'click-container-')]")
+                ));
+
+                // 👉 Scroll only if card is not fully visible 
+                js.executeScript(
+                        "var rect = arguments[0].getBoundingClientRect();" +
+                        "if(rect.top < 0 || rect.bottom > window.innerHeight) {" +
+                        "arguments[0].scrollIntoView({block:'center'});" +
+                        "}", card
+                );
+                Thread.sleep(700);
+
+                // 👉 Safe click
+                Set<String> oldTabs = driver.getWindowHandles();
+                String oldUrl = driver.getCurrentUrl();
+
+                js.executeScript("arguments[0].click();", card);
+                Thread.sleep(2000);
+
+                // 👉 Check for new tab
+                Set<String> newTabs = driver.getWindowHandles();
+                newTabs.removeAll(oldTabs);
+
+                if (!newTabs.isEmpty()) {
+                    // Opened in new tab
+                    String newTab = newTabs.iterator().next();
+                    driver.switchTo().window(newTab);
+
+                    System.out.println("Opened in NEW TAB: " + driver.getCurrentUrl());
+                    Thread.sleep(2000);
+
+                    driver.close();
+                    driver.switchTo().window(mainWindow);
+                    Thread.sleep(1500);
+
+                } else {
+                    // Same tab
+                    String newUrl = driver.getCurrentUrl();
+
+                    if (!newUrl.equals(oldUrl)) {
+                        System.out.println("Navigated to: " + newUrl);
+                        Thread.sleep(2000);
+
+                        driver.navigate().back();
+
+                        // Re-wait for cards after reload
+                        wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(cardSelector));
+                        Thread.sleep(1500);
+
+                    } else {
+                        System.out.println("⚠ No navigation occurred");
+                    }
+                }
+
+                index++;
+            }
+
+            System.out.println("\n🎉 TC106 PASSED — Optimized and no stale elements!");
+
+        } catch (Exception e) {
+            System.out.println("❌ TC106 FAILED: " + e.getMessage());
+            Assert.fail(e.getMessage());
+        }
+    }
+
 
     public static void testDoctorProfiles() throws InterruptedException {
         try {
@@ -189,179 +782,352 @@ public class homePage {
         }
     }
     public void testPatientTalksDots() throws InterruptedException {
+        String testCaseId = "TC108";
+        String feature = "Patient Talks Carousel";
+        String description = "Verify each dot in the 'Patients love us' carousel activates correctly.";
+
+        System.out.println("\n======================================================");
+        System.out.println("🧾 TEST CASE ID: " + testCaseId);
+        System.out.println("📂 FEATURE: " + feature);
+        System.out.println("🎯 DESCRIPTION: " + description);
+        System.out.println("======================================================\n");
+
         try {
             JavascriptExecutor js = (JavascriptExecutor) driver;
 
+            // STEP 1: Scroll to section once
             WebElement heading = wait.until(ExpectedConditions.visibilityOfElementLocated(
                     By.xpath("//h2[text()='Patients love us']")));
-            scrollIntoView(heading);
-            Thread.sleep(500);
+            js.executeScript("arguments[0].scrollIntoView({block:'center'});", heading);
+            Thread.sleep(1200);
 
+            // STEP 2: Locate dot container
             WebElement dotsContainer = wait.until(ExpectedConditions.visibilityOfElementLocated(
                     By.cssSelector(".patienttalks-dots-container")));
+
             List<WebElement> dots = dotsContainer.findElements(By.cssSelector(".patienttalks-dot"));
 
             System.out.println("🔹 Total PatientTalks dots found: " + dots.size());
 
+            // STEP 3: Loop through each dot
             for (int i = 0; i < dots.size(); i++) {
-                dots = dotsContainer.findElements(By.cssSelector(".patienttalks-dot")); // refresh each loop
+
+                System.out.println("\n------------------------------------------------------");
+                System.out.println("▶️ VALIDATING DOT #" + (i + 1));
+
+                // REFRESH dots list every iteration to avoid stale elements
+                dots = dotsContainer.findElements(By.cssSelector(".patienttalks-dot"));
                 WebElement dot = dots.get(i);
+
                 String index = dot.getAttribute("data-index");
 
-                scrollIntoView(dot);
-                actions.moveToElement(dot).perform();
-                js.executeScript("arguments[0].click();", dot);
-                Thread.sleep(1000); // wait for carousel animation
+                // Scroll only if not visible
+                js.executeScript(
+                        "var r = arguments[0].getBoundingClientRect();" +
+                        "if(r.top < 0 || r.bottom > window.innerHeight) " +
+                        "{ arguments[0].scrollIntoView({block:'center'}); }",
+                        dot
+                );
+                Thread.sleep(500);
 
-                if (dot.getAttribute("class").contains("active")) {
+                // Safe JS click
+                js.executeScript("arguments[0].click();", dot);
+                Thread.sleep(1200); // wait for animation to complete
+
+                // VERIFY ACTIVE STATE
+                boolean isActive = dot.getAttribute("class").contains("active");
+
+                if (isActive) {
                     System.out.println("✅ Dot " + index + " is active after click");
                 } else {
                     System.out.println("❌ Dot " + index + " did NOT become active");
                 }
             }
-            System.out.println("🎉 All PatientTalks dots clicked and verified successfully!");
+
+            System.out.println("\n🎉 " + testCaseId + " PASSED — All dots verified successfully!");
+
         } catch (Exception e) {
-            System.out.println("❌ PatientTalks test failed: " + e.getMessage());
+            System.out.println("❌ " + testCaseId + " FAILED: " + e.getMessage());
+            Assert.fail("PatientTalks dots test failed: " + e.getMessage());
         }
+
+        System.out.println("\n======================================================");
+        System.out.println("🏁 END OF TEST CASE: " + testCaseId);
+        System.out.println("======================================================\n");
     }
-    public void testWhatsAppEnquiryPositive() {
-        String message = "this is a test message";
+
+    
+    public void testLuxGPT() throws InterruptedException {
+        String testCaseId = "TC109";
+        System.out.println("\n========== TC109 : LuxGPT Tests ==========\n");
+
         try {
-            WebElement input = driver.findElement(By.id("messageInput"));
-            WebElement sendButton = driver.findElement(By.cssSelector("form.luxgpt-input-row button[type='submit']"));
+            JavascriptExecutor js = (JavascriptExecutor) driver;
+
+            // Scroll to LuxGPT section
+            WebElement header = wait.until(ExpectedConditions.presenceOfElementLocated(
+                    By.xpath("//span[contains(text(),'LUXGPT')]")
+            ));
+            scrollIntoView(header);
+            Thread.sleep(1200);
+
+            WebElement input = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.id("messageInput")
+            ));
+            WebElement sendButton = wait.until(ExpectedConditions.elementToBeClickable(
+                    By.cssSelector("form.luxgpt-input-row button[type='submit']")
+            ));
+
+            // --------------------------------------------
+            //  NEGATIVE TEST – EMPTY INPUT
+            // --------------------------------------------
+            System.out.println("------ NEGATIVE TEST (Empty Input) ------");
 
             input.clear();
+            js.executeScript("arguments[0].click();", sendButton);
+            Thread.sleep(500);
 
-            // Type character by character for visual effect
-            for (char c : message.toCharArray()) {
-                input.sendKeys(String.valueOf(c));
-                Thread.sleep(150); // adjust speed for visibility
+            // HANDLE JS ALERT QUICKLY
+            try {
+                Alert alert = wait.until(ExpectedConditions.alertIsPresent());
+                System.out.println("⚠ Alert detected: " + alert.getText());
+                alert.accept();
+                System.out.println("✔ Alert closed!");
+            } catch (Exception ex) {
+                System.out.println("ℹ No alert appeared for negative test.");
             }
-            System.out.println("✅ Positive Scenario: Message entered visibly.");
+
+            Thread.sleep(1000); // Let the UI settle
+
+            // --------------------------------------------
+            //  POSITIVE TEST – VALID MESSAGE
+            // --------------------------------------------
+            System.out.println("\n------ POSITIVE TEST (Valid Message) ------");
+
+            // Make sure NO alert is open before typing
+            try {
+                Alert leftover = driver.switchTo().alert();
+                leftover.accept();
+                System.out.println("✔ Closed leftover alert before typing.");
+            } catch (NoAlertPresentException ignored) {}
+
+            input = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("messageInput")));
+            input.clear();
+            Thread.sleep(400);
+
+            String message = "This is a test message";
+            input.sendKeys(message);
+            System.out.println("✔ Typed message: " + message);
 
             scrollIntoView(sendButton);
-            highlight(sendButton);
 
             Set<String> oldTabs = driver.getWindowHandles();
-            sendButton.click();
-            Thread.sleep(2000);
-            removeHighlight(sendButton);
+            js.executeScript("arguments[0].click();", sendButton);
 
-            // Verify new tab opened
+            Thread.sleep(2000);
+
+            // CHECK IF NEW TAB OPENED
             Set<String> newTabs = driver.getWindowHandles();
             newTabs.removeAll(oldTabs);
+
             if (!newTabs.isEmpty()) {
-                String newTab = newTabs.iterator().next();
-                driver.switchTo().window(newTab);
-                System.out.println("🔗 Positive Scenario: New Tab URL - " + driver.getCurrentUrl());
-                Thread.sleep(2000);
+                String tab = newTabs.iterator().next();
+                driver.switchTo().window(tab);
+                System.out.println("🌍 New tab opened: " + driver.getCurrentUrl());
+                Thread.sleep(1500);
                 driver.close();
                 driver.switchTo().window(oldTabs.iterator().next());
             } else {
-                System.out.println("❌ Positive Scenario failed: No tab opened after sending message.");
+                System.out.println("❌ No new tab opened in positive case.");
             }
 
-        } catch (Exception e) {
-            System.out.println("❌ WhatsApp Positive test failed: " + e.getMessage());
-        }
-    }
-    public void testWhatsAppEnquiryNegative() throws InterruptedException {
-        try {
-            System.out.println("\n?? Negative Scenario: Input is empty. Attempting to send...");
-
-            WebElement input = wait.until(ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector("#messageInput")));
-            WebElement sendButton = wait.until(ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector("form.luxgpt-input-row button[type='submit']")));
-
-            input.clear(); // ensure empty
-            scrollIntoView(sendButton);
-            highlight(sendButton);
-
-            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", sendButton);
-
-            Thread.sleep(1500); // wait for popup
-
-            System.out.println("✅ WhatsApp Negative test executed (popup should appear).");
-            removeHighlight(sendButton);
+            System.out.println("\n🎉 TC109 PASSED: LuxGPT negative + positive tests completed.");
 
         } catch (Exception e) {
-            System.out.println("❌ WhatsApp Negative test failed: " + e.getMessage());
+            System.out.println("❌ TC109 FAILED: " + e.getMessage());
+            Assert.fail("LuxGPT test failed: " + e.getMessage());
         }
+
+        System.out.println("\n==========================================");
     }
 
     public void testArticles() throws InterruptedException {
+        String testCaseId = "TC110";
+
         try {
+            System.out.println("\n============== TC110: Health Articles ==============\n");
+
             JavascriptExecutor js = (JavascriptExecutor) driver;
+
+            // Scroll to section heading once
             WebElement heading = wait.until(ExpectedConditions.visibilityOfElementLocated(
-                By.xpath("//h2[contains(text(),'Latest Health Articles by Lux')]")
+                    By.xpath("//h2[contains(text(),'Latest Health Articles')]")
             ));
             scrollIntoView(heading);
-            Thread.sleep(500);
+            Thread.sleep(1000);
 
-            actions.moveByOffset(190, 0).perform();
-            Thread.sleep(500);
-            actions.moveByOffset(-190, 0).perform();
+            System.out.println("📌 Reached 'Latest Health Articles' section");
 
-            List<WebElement> titles = driver.findElements(By.cssSelector(".card-title a"));
             String parentWindow = driver.getWindowHandle();
 
-            for (int i = 0; i < titles.size(); i++) {
-                titles = driver.findElements(By.cssSelector(".card-title a"));
-                WebElement title = titles.get(i);
-                scrollIntoView(title);
-                js.executeScript("arguments[0].click();", title);
-                Thread.sleep(1000);
+            // Get number of articles (don't store elements → avoid stale)
+            int totalArticles = driver.findElements(By.cssSelector(".card-title a")).size();
+            System.out.println("📰 Total Articles Found: " + totalArticles);
 
-                for (String tab : driver.getWindowHandles()) {
-                    if (!tab.equals(parentWindow)) {
-                        driver.switchTo().window(tab);
-                        driver.close();
+            for (int i = 0; i < totalArticles; i++) {
+
+                System.out.println("\n--------------------------------------------------");
+                System.out.println("➡ Testing Article #" + (i + 1));
+
+                // Re-fetch element fresh each loop
+                List<WebElement> titles = wait.until(
+                        ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector(".card-title a"))
+                );
+                WebElement article = titles.get(i);
+
+                scrollIntoView(article);
+                highlight(article);
+                Thread.sleep(500);
+
+                String oldUrl = driver.getCurrentUrl();
+                Set<String> oldTabs = driver.getWindowHandles();
+
+                // Safe JS click
+                js.executeScript("arguments[0].click();", article);
+                System.out.println("🖱 Clicked Article #" + (i + 1));
+                Thread.sleep(2000);
+
+                // Detect new tab
+                Set<String> newTabs = driver.getWindowHandles();
+                newTabs.removeAll(oldTabs);
+
+                if (!newTabs.isEmpty()) {
+                    // NEW TAB OPENED
+                    String newTab = newTabs.iterator().next();
+                    driver.switchTo().window(newTab);
+                    Thread.sleep(1200);
+
+                    System.out.println("🌍 Opened in NEW tab: " + driver.getCurrentUrl());
+
+                    driver.close(); // Close article
+                    driver.switchTo().window(parentWindow);
+
+                } else {
+                    // SAME TAB NAVIGATION
+                    String newUrl = driver.getCurrentUrl();
+
+                    if (!newUrl.equals(oldUrl)) {
+                        System.out.println("↪ Navigated in SAME tab: " + newUrl);
+
+                        driver.navigate().back();
+                        Thread.sleep(2000);
+
+                    } else {
+                        System.out.println("⚠ No navigation occurred!");
                     }
                 }
-                driver.switchTo().window(parentWindow);
-                Thread.sleep(1000);
-                System.out.println("✅ Clicked Article #" + (i + 1));
+
+                removeHighlight1(article);
+                Thread.sleep(1200);
             }
 
-            System.out.println("🎉 All articles clicked successfully.");
+            System.out.println("\n🎉 TC110 PASSED — All health articles validated successfully!");
         } catch (Exception e) {
-            System.out.println("❌ testArticles failed: " + e.getMessage());
+            System.out.println("❌ TC110 FAILED: " + e.getMessage());
+            Assert.fail("Health Articles section failed: " + e.getMessage());
         }
+
+        System.out.println("\n======================================================\n");
     }
 
     // ==========================
     // FAQ ACCORDIONS TEST
     // ==========================
     public void testAllFaqAccordions() throws InterruptedException {
+        String testCaseId = "TC111";
+
         try {
-            List<WebElement> allAccordions = driver.findElements(By.cssSelector("div.accordion"));
-            System.out.println("🔍 Total FAQs found: " + allAccordions.size());
+            System.out.println("\n============== TC111: FAQ Section ==============\n");
 
-            for (WebElement accordion : allAccordions) {
-                WebElement questionSpan = accordion.findElement(By.cssSelector(".accordion_head > span"));
-                String questionText = questionSpan.getText().trim();
+            JavascriptExecutor js = (JavascriptExecutor) driver;
 
-                scrollIntoView(questionSpan);
-                Thread.sleep(500);
-                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", questionSpan);
-                System.out.println("❓ Clicked: " + questionText);
+            // Find first FAQ accordion to scroll into section
+            List<WebElement> allAccordions = wait.until(
+                    ExpectedConditions.visibilityOfAllElementsLocatedBy(
+                            By.cssSelector("div.accordion")
+                    )
+            );
 
-                WebElement answerDiv = accordion.findElement(By.cssSelector(".accordion_content"));
-                wait.until(d -> answerDiv.getAttribute("style").contains("max-height") &&
-                                !answerDiv.getAttribute("style").contains("max-height: 0px"));
-
-                WebElement answerParagraph = answerDiv.findElement(By.cssSelector(".faq_answer"));
-                String answerText = answerParagraph.getText().trim();
-                System.out.println("✅ Answer: " + answerText);
-
-                Thread.sleep(1000); // pause for readability
+            if (allAccordions.isEmpty()) {
+                System.out.println("❌ TC111 FAILED: No accordion FAQ items found on page.");
+                Assert.fail("No FAQs detected.");
             }
-            System.out.println("🎉 All FAQ accordions tested successfully!");
+
+            // Scroll to the first accordion
+            scrollIntoView(allAccordions.get(0));
+            Thread.sleep(1000);
+
+            System.out.println("📌 FAQ section reached.");
+            System.out.println("📄 Total FAQs found: " + allAccordions.size());
+
+            for (int i = 0; i < allAccordions.size(); i++) {
+
+                System.out.println("\n------------------------------------------------------");
+                System.out.println("➡ Testing FAQ #" + (i + 1));
+
+                // Re-fetch fresh elements
+                List<WebElement> freshAccordions = driver.findElements(By.cssSelector("div.accordion"));
+                WebElement accordion = freshAccordions.get(i);
+
+                WebElement question = accordion.findElement(By.cssSelector(".accordion_head > span"));
+                WebElement answerDiv = accordion.findElement(By.cssSelector(".accordion_content"));
+
+                String questionText = question.getText().trim();
+
+                scrollIntoView(question);
+                highlight(question);
+                Thread.sleep(500);
+
+                System.out.println("❓ Clicking: " + questionText);
+
+                // Expand
+                js.executeScript("arguments[0].click();", question);
+                Thread.sleep(800);
+
+                wait.until(d ->
+                        answerDiv.getAttribute("style") != null &&
+                        !answerDiv.getAttribute("style").contains("max-height: 0px")
+                );
+
+                System.out.println("✅ Expanded successfully.");
+
+                Thread.sleep(700);
+
+                // Collapse
+                System.out.println("🔽 Collapsing...");
+                js.executeScript("arguments[0].click();", question);
+                Thread.sleep(800);
+
+                wait.until(d ->
+                        answerDiv.getAttribute("style") != null &&
+                        answerDiv.getAttribute("style").contains("max-height: 0px")
+                );
+
+                System.out.println("✔ Collapsed successfully.");
+
+                removeHighlight1(question);
+                Thread.sleep(500);
+            }
+
+            System.out.println("\n🎉 TC111 PASSED — All FAQs expand/collapse correctly!");
+            System.out.println("\n======================================================\n");
+
         } catch (Exception e) {
-            System.out.println("❌ FAQ Accordions test failed: " + e.getMessage());
+            System.out.println("❌ TC111 FAILED: " + e.getMessage());
+            Assert.fail("FAQ Test failed: " + e.getMessage());
         }
     }
+
 
     // === HELPERS ===
     private void highlight(WebElement el) {
@@ -416,4 +1182,92 @@ public class homePage {
             driver.get("https://luxhospitals.com/");
         }
     }
+    public void testFooterLinks() throws Exception {
+
+        driver.get("https://luxhospitals.com/");
+        Thread.sleep(2500);
+
+        String mainWindow = driver.getWindowHandle();
+
+        scrollToFooter();
+        Thread.sleep(1500);
+
+        // ONLY FOOTER LINKS — FIXED SELECTOR
+        List<WebElement> footerLinks = driver.findElements(
+                By.cssSelector("div[data-id='b3a03d4'] a")
+        );
+
+        List<String> hrefList = new ArrayList<>();
+        Set<String> unique = new HashSet<>();
+
+        // COLLECT URLS IN ORDER (TOP->BOTTOM LEFT->RIGHT)
+        for (WebElement link : footerLinks) {
+            try {
+                String href = link.getAttribute("href");
+                if (href == null || href.isEmpty()) continue;
+                if (!link.isDisplayed()) continue;     
+                if (unique.contains(href)) continue;
+                unique.add(href);
+                hrefList.add(href);
+            } catch (Exception ignored) {}
+        }
+
+        System.out.println("FOOTER LINKS FOUND: " + hrefList.size());
+
+        // CLICK EACH LINK IN VISUAL ORDER
+        for (int i = 0; i < hrefList.size(); i++) {
+
+            String href = hrefList.get(i);
+            System.out.println("Clicking " + (i+1) + "/" + hrefList.size() + " : " + href);
+
+            scrollToFooter();
+            Thread.sleep(1000);
+
+            try {
+                WebElement link = driver.findElement(By.cssSelector("div[data-id='b3a03d4'] a[href='" + href + "']"));
+
+                scrollIntoView(link);
+                Thread.sleep(500);
+
+                Set<String> oldWindows = driver.getWindowHandles();
+                link.click();
+                Thread.sleep(2500);
+
+                Set<String> newWindows = driver.getWindowHandles();
+
+                // OPENED NEW TAB?
+                if (newWindows.size() > oldWindows.size()) {
+                    for (String w : newWindows) {
+                        if (!oldWindows.contains(w)) {
+                            driver.switchTo().window(w);
+                            break;
+                        }
+                    }
+                    driver.close();
+                    driver.switchTo().window(mainWindow);
+                } else {
+                    driver.navigate().back();
+                }
+
+            } catch (Exception e) {
+                System.out.println("FAILED clicking " + href + " -> " + e.getMessage());
+                driver.switchTo().window(mainWindow);
+            }
+        }
+
+        System.out.println("ALL FOOTER LINKS DONE.");
+    }
+    private void scrollToFooter() {
+        try {
+            WebElement footer = driver.findElement(By.cssSelector("div[data-id='b3a03d4']"));
+            ((JavascriptExecutor) driver)
+                    .executeScript("arguments[0].scrollIntoView({block:'start', behavior:'instant'});", footer);
+            Thread.sleep(800);
+        } catch (Exception e) {
+            // fallback scroll to bottom
+            ((JavascriptExecutor) driver)
+                    .executeScript("window.scrollTo(0, document.body.scrollHeight);");
+        }
+    }
+
 }

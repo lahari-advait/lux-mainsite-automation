@@ -16,16 +16,20 @@ public class alldoctorsTest extends BaseTest {
        
         doctorsHandler = new doctorsHandlers(driver);
     }
+    @Test(priority = 1)
+    public void testDoctorsPageLoad() {
+       allDoctorCards.openDoctorsPage();  // Calls the method inside your page class
+    }
 
-    @Test(priority=1)
+    @Test(priority=2)
     public void testDrSamhithaMethods() throws InterruptedException {
         doctorsHandlers.drSamhithaMethods();
     }
-    @Test(priority=2)
+    @Test(priority=3)
     public void testdrAbhishekMethods() throws InterruptedException {
         doctorsHandlers.drAbhishekMethods();
     }
-    @Test(priority = 3)
+    @Test(priority = 4)
     public void testDrSamhithaAlukurMethods() throws InterruptedException {
         doctorsHandlers.drSamhithaAlukurMethods();
     }
@@ -33,36 +37,36 @@ public class alldoctorsTest extends BaseTest {
     public void testDrHarshitaKakarlaMethods() throws InterruptedException {
         doctorsHandlers.drHarshitaKakarlaMethods();
     }
-    @Test(priority = 5)
+    @Test(priority = 6)
     public void testDrPPragniaMethods() throws InterruptedException {
         doctorsHandlers.drPPragniaMethods();
     }
-    @Test(priority = 6)
+    @Test(priority = 7)
     public void testDrPriyankSalechaMethods() throws InterruptedException {
         doctorsHandlers.drPriyankSalechaMethods();
     }
-    @Test(priority = 7)
+    @Test(priority = 8)
     public void testDrChandanaGuduruMethods() throws InterruptedException {
         doctorsHandlers.drChandanaGuduruMethods();
     }
-    @Test(priority = 8)
+    @Test(priority = 9)
     public void testDrRamPrabhuMethods() throws InterruptedException {
         doctorsHandlers.drRamPrabhuMethods();
     }
-    @Test(priority = 9)
+    @Test(priority = 10)
     public void testDrMadhanMohanMethods() throws InterruptedException {
         doctorsHandlers.drMadhanMohanMethods();
     }
-    @Test(priority = 10)
+    @Test(priority = 11)
     public void testDrSaiKishanSirasalaMethods() throws InterruptedException {
         doctorsHandlers.drSaiKishanSirasalaMethods();
     }
-    @Test(priority = 11)
+    @Test(priority = 12)
     public void testDrBathiniHitheshMethods() throws InterruptedException {
         doctorsHandlers.drBathiniHitheshMethods();
     }
 
-    @Test(priority = 12)
+    @Test(priority = 13)
     public void testDtKruthiGoudMethods() throws InterruptedException {
         doctorsHandlers.dtKruthiGoudMethods();
     }

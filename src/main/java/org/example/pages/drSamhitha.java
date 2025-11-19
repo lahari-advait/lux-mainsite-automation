@@ -4,7 +4,7 @@ import org.openqa.selenium.WebDriver;
 
 public class drSamhitha {
 
-    private WebDriver driver;
+    static WebDriver driver;
     private String parentWindow; 
     public allDoctorCards allDoctorCards;
 
