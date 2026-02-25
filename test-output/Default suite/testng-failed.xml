@@ -3,25 +3,14 @@
 <suite name="Failed suite [Default suite]" guice-stage="DEVELOPMENT">
   <test thread-count="5" name="Default test(failed)">
     <classes>
-      <class name="org.example.tests.allTreatmentsTest">
+      <class name="org.example.tests.ForPatientsTest">
         <methods>
-          <include name="gastroInflammatoryBowelDiseaseTest"/>
-          <include name="gastroChronicConstipationTest"/>
-          <include name="testProctologyPilesMethods"/>
-          <include name="proctologyAnalPolypRemovalTest"/>
-          <include name="testproctologyAnalFissureMethods"/>
-          <include name="proctologyFecalIncontinenceTest"/>
-          <include name="proctologyAnalFissureMethods"/>
-          <include name="proctologyPerianalAbscessMethods"/>
-          <include name="setUpTreatmentsHandler"/>
-          <include name="testproctologyAnalFistulaMethods"/>
-          <include name="proctologyPilonidalSinusTest"/>
-          <include name="setUp"/>
-          <include name="gastroUlcerativeColitisTest"/>
-          <include name="gastroIrritableBowelSyndromeTest"/>
-          <include name="gynPelvicFloorDysfunctionTest"/>
+          <include name="tearDownOnce"/>
+          <include name="setUpOnce"/>
+          <include name="goHome"/>
+          <include name="verifyForPatientsDropdownAndBlogsInternalTesting"/>
         </methods>
-      </class> <!-- org.example.tests.allTreatmentsTest -->
+      </class> <!-- org.example.tests.ForPatientsTest -->
     </classes>
   </test> <!-- Default test(failed) -->
 </suite> <!-- Failed suite [Default suite] -->

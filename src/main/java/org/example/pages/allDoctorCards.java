@@ -11,9 +11,9 @@ import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.*;
 
 public class allDoctorCards {
+	private WebDriver driver;
+	private WebDriverWait wait;
 
-    private static WebDriver driver;
-    private static WebDriverWait wait;
     private JavascriptExecutor js;
 
     public allDoctorCards(WebDriver driver) {
@@ -35,41 +35,19 @@ public class allDoctorCards {
 //        doctorsLink.click();
 //        wait.until(ExpectedConditions.urlContains("/doctors"));
 //    }
-    public static void openDoctorsPage() {
-        String testCaseID = "TC201";
-        String feature = "Doctors Page Load";
-        String expected = "Doctors page should open successfully when clicking 'Doctors' in navbar.";
-        String actual;
-        String status;
-
-        try {
-            // Preconditions: Homepage loaded (assume driver already on homepage)
-            By doctorsNavLink = By.xpath("//a[contains(text(),'Doctors')]");
-            WebElement doctorsLink = wait.until(ExpectedConditions.elementToBeClickable(doctorsNavLink));
-            doctorsLink.click();
-
-            // Wait until URL contains /doctors
-            wait.until(ExpectedConditions.urlContains("/doctors"));
-
-            actual = "Doctors page loaded with URL: " + driver.getCurrentUrl();
-
-            if (driver.getCurrentUrl().contains("/doctors")) {
-                status = "PASS";
-            } else {
-                status = "FAIL";
-            }
-        } catch (Exception e) {
-            actual = "Exception occurred: " + e.getMessage();
-            status = "ERROR";
+    public void openDoctorsPage() {
+        // ✅ If already on doctors page, don't click menu again
+        if (driver.getCurrentUrl().contains("/doctors")) {
+            System.out.println("✅ Already on Doctors page: " + driver.getCurrentUrl());
+            return;
         }
 
-        // Print structured result
-        System.out.println("Test Case ID: " + testCaseID);
-        System.out.println("Feature: " + feature);
-        System.out.println("Expected Result: " + expected);
-        System.out.println("Actual Result: " + actual);
-        System.out.println("Status: " + status);
-        System.out.println("--------------------------------------------------");
+        By doctorsNavLink = By.xpath("//a[contains(text(),'Doctors')]");
+        WebElement doctorsLink = wait.until(ExpectedConditions.elementToBeClickable(doctorsNavLink));
+        doctorsLink.click();
+
+        wait.until(ExpectedConditions.urlContains("/doctors"));
+        System.out.println("✅ Doctors page loaded: " + driver.getCurrentUrl());
     }
 
 
@@ -106,51 +84,61 @@ public class allDoctorCards {
    }
 
     // Click Book Appointment on the child window
-    public void clickBookAppointmentAndCloseWhatsApp() throws InterruptedException {
-        By bookAppointmentBtn = By.xpath("//a[contains(@class,'elementor-button')]//span[normalize-space()='Book Appointment']/ancestor::a[1]");
+    public void clickBookAppointmentAndCloseWhatsApp() {
+
+        By bookAppointmentBtn = By.xpath(
+            "//a[contains(@class,'triger-carecansole') and normalize-space()='Book Appointment']"
+        );
 
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(20));
-        WebElement button = wait.until(ExpectedConditions.presenceOfElementLocated(bookAppointmentBtn));
 
-        js.executeScript("arguments[0].scrollIntoView({behavior:'smooth', block:'center'});", button);
-        Thread.sleep(1000);
+        // Ensure doctor profile page
+        wait.until(ExpectedConditions.urlContains("/doctors/"));
 
-        // Get current window before click
-        String originalWindow = driver.getWindowHandle();
-        Set<String> windowsBefore = driver.getWindowHandles();
+        WebElement btn = wait.until(ExpectedConditions.visibilityOfElementLocated(bookAppointmentBtn));
 
-        // JS click to open WhatsApp
-        js.executeScript("arguments[0].click();", button);
+        String doctorProfileWindow = driver.getWindowHandle();
+        String doctorProfileUrl = driver.getCurrentUrl();
+        Set<String> windowsBeforeClick = driver.getWindowHandles();
 
-        // Wait for new tab to open
-        WebDriverWait tabWait = new WebDriverWait(driver, Duration.ofSeconds(15));
-        tabWait.until(d -> d.getWindowHandles().size() > windowsBefore.size());
+        // Trigger JS-bound CTA
+        js.executeScript(
+            "arguments[0].dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));",
+            btn
+        );
 
-        // Identify and switch to new tab
-        Set<String> windowsAfter = driver.getWindowHandles();
-        windowsAfter.removeAll(windowsBefore);
-        String newTab = windowsAfter.iterator().next();
+        // Wait for WhatsApp (same tab OR new tab)
+        wait.until(d ->
+            d.getWindowHandles().size() > windowsBeforeClick.size()
+            || d.getCurrentUrl().contains("api.whatsapp.com")
+        );
 
-        driver.switchTo().window(newTab);
-        System.out.println("✅ Switched to WhatsApp tab: " + driver.getCurrentUrl());
+        /* ───────── CASE 1: WhatsApp opened in SAME TAB ───────── */
+        if (driver.getCurrentUrl().contains("api.whatsapp.com")) {
 
-        Thread.sleep(5000); // just to observe the tab
+            // ❌ DO NOT driver.close()
+            // ✅ Navigate back to doctor profile
+            driver.navigate().to(doctorProfileUrl);
 
-        // ✅ Always check before closing
-        if (driver.getCurrentUrl().contains("whatsapp")) {
-            System.out.println("✅ WhatsApp opened successfully!");
-        } else {
-            System.out.println("⚠️ WhatsApp may not have loaded correctly.");
+            wait.until(ExpectedConditions.urlToBe(doctorProfileUrl));
+
+            System.out.println("🟢 WhatsApp opened in same tab. Navigated back to doctor profile.");
+            return;
         }
 
-        // ✅ Close WhatsApp tab
-        driver.close();
+        /* ───────── CASE 2: WhatsApp opened in NEW TAB ───────── */
+        for (String win : driver.getWindowHandles()) {
+            if (!windowsBeforeClick.contains(win)) {
+                driver.switchTo().window(win);
+                driver.close(); // Safe here
+                break;
+            }
+        }
 
-        // ✅ Important: switch back to original window if it still exists
-        driver.switchTo().window(originalWindow);
-        System.out.println("✅ Switched back to original page: " + driver.getTitle());
+        driver.switchTo().window(doctorProfileWindow);
+
+        System.out.println("🟢 WhatsApp tab closed. Doctor profile retained.");
     }
-
 
     public void scrollToTestimonialsAndClickDots() throws InterruptedException {
         // 1️⃣ Scroll to the "Testimonials" heading
@@ -325,197 +313,370 @@ public class allDoctorCards {
 //            "Dt. Kruthi Goud"
 //        };
 
+//    public void clickAllDoctorCards() {
+//
+//        try {
+//            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+//            JavascriptExecutor js = (JavascriptExecutor) driver;
+//
+//            WebElement heading = wait.until(
+//                ExpectedConditions.visibilityOfElementLocated(
+//                    By.xpath("//h2[contains(text(),'Other Doctors')]")
+//                )
+//            );
+//            js.executeScript("arguments[0].scrollIntoView({block:'center'});", heading);
+//
+//            List<WebElement> dots = wait.until(
+//                ExpectedConditions.visibilityOfAllElementsLocatedBy(
+//                    By.cssSelector(".swiper-pagination-bullet")
+//                )
+//            );
+//
+//            for (int i = 0; i < dots.size(); i++) {
+//
+//                dots = wait.until(
+//                    ExpectedConditions.visibilityOfAllElementsLocatedBy(
+//                        By.cssSelector(".swiper-pagination-bullet")
+//                    )
+//                );
+//
+//                WebElement dot = dots.get(i);
+//                js.executeScript("arguments[0].click();", dot);
+//                Thread.sleep(800);
+//
+//                WebElement activeCard = wait.until(
+//                    ExpectedConditions.visibilityOfElementLocated(
+//                        By.cssSelector(".swiper-slide-active .elementor-element.e-con-full")
+//                    )
+//                );
+//
+//                BiConsumer<WebElement, String> safeClick = (link, label) -> {
+//                    try {
+//                        String parentWindow = driver.getWindowHandle();
+//                        Set<String> beforeWindows = driver.getWindowHandles();
+//                        String returnUrl = driver.getCurrentUrl();
+//                        Long scrollY = (Long) js.executeScript("return window.pageYOffset;");
+//
+//                        js.executeScript("arguments[0].scrollIntoView({block:'center'});", link);
+//                        js.executeScript("arguments[0].click();", link);
+//
+//                        WebDriverWait smallWait = new WebDriverWait(driver, Duration.ofSeconds(8));
+//                        smallWait.until(d ->
+//                            d.getWindowHandles().size() > beforeWindows.size()
+//                            || !d.getCurrentUrl().equals(returnUrl)
+//                        );
+//
+//                        // ⏳ WAIT AFTER OPEN
+//                        Thread.sleep(2000);
+//
+//                        Set<String> afterWindows = driver.getWindowHandles();
+//
+//                        if (afterWindows.size() > beforeWindows.size()) {
+//                            afterWindows.removeAll(beforeWindows);
+//                            String newTab = afterWindows.iterator().next();
+//                            driver.switchTo().window(newTab);
+//
+//                            Thread.sleep(2000); // wait inside new tab
+//
+//                            driver.close();
+//                            driver.switchTo().window(parentWindow);
+//                        } else {
+//                            Thread.sleep(2000); // wait in same tab
+//                            driver.navigate().back();
+//                        }
+//
+//                        smallWait.until(ExpectedConditions.urlToBe(returnUrl));
+//                        js.executeScript("window.scrollTo(0, arguments[0]);", scrollY);
+//
+//                    } catch (Exception ignored) {}
+//                };
+//
+//                try {
+//                    WebElement viewProfile = activeCard.findElement(
+//                        By.xpath(".//a[contains(normalize-space(.),'View Profile')]")
+//                    );
+//                    safeClick.accept(viewProfile, "View Profile");
+//                } catch (NoSuchElementException ignored) {}
+//
+//                activeCard = wait.until(
+//                    ExpectedConditions.visibilityOfElementLocated(
+//                        By.cssSelector(".swiper-slide-active .elementor-element.e-con-full")
+//                    )
+//                );
+//
+//                try {
+//                    WebElement bookBtn = activeCard.findElement(
+//                        By.xpath(".//a[contains(normalize-space(.),'Book Appointment')]")
+//                    );
+//                    safeClick.accept(bookBtn, "Book Appointment");
+//                } catch (NoSuchElementException ignored) {}
+//
+//                Thread.sleep(600);
+//            }
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
+//
     public void clickAllDoctorCards() {
-    	 try {
-    	        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(12));
-    	        JavascriptExecutor js = (JavascriptExecutor) driver;
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+        JavascriptExecutor js = (JavascriptExecutor) driver;
 
-    	        // Scroll to "Other Doctors" section
-    	        WebElement heading = wait.until(ExpectedConditions.visibilityOfElementLocated(
-    	                By.xpath("//h2[contains(text(),'Other Doctors')]")));
-    	        js.executeScript("arguments[0].scrollIntoView({behavior:'smooth', block:'center'});", heading);
-    	        System.out.println("✅ Scrolled to 'Other Doctors' section.");
-
-    	        final String mainWindow = driver.getWindowHandle();
-
-    	        // Find total doctor cards via carousel dots
-    	        List<WebElement> dots = wait.until(ExpectedConditions.visibilityOfAllElementsLocatedBy(
-    	                By.cssSelector(".swiper-pagination-bullet")));
-    	        int totalCards = dots.size();
-    	        System.out.println("🟢 Found " + totalCards + " doctor cards.");
-
-    	        for (int i = 0; i < totalCards; i++) {
-    	            System.out.println("\n➡️ Processing doctor card " + (i + 1));
-
-    	            // Ensure main window focus
-    	            try { driver.switchTo().window(mainWindow); } catch (Exception ignored) {}
-
-    	            // Re-fetch dots to avoid stale references
-    	            dots = wait.until(ExpectedConditions.visibilityOfAllElementsLocatedBy(
-    	                    By.cssSelector(".swiper-pagination-bullet")));
-    	            WebElement dot = dots.get(i);
-
-    	            // Click the dot (scroll into view + single JS click)
-    	            js.executeScript("arguments[0].scrollIntoView({behavior:'smooth', block:'center'});", dot);
-    	            js.executeScript("arguments[0].click();", dot);
-
-    	            // small sleep to allow carousel to animate; explicit wait below also helps
-    	            Thread.sleep(900);
-
-    	            // Active card
-    	            WebElement activeCard = wait.until(ExpectedConditions.visibilityOfElementLocated(
-    	                    By.cssSelector(".swiper-slide-active .elementor-element.e-con-full")));
-
-    	            // Helper inline: safely click a link that may open a new tab and return
-    	            BiConsumer<WebElement, String> safeClickAndCloseNewTab = (link, name) -> {
-    	                if (link == null) {
-    	                    System.out.println("⚠️ " + name + " link element is null.");
-    	                    return;
-    	                }
-    	                try {
-    	                    // record handles before click
-    	                    Set<String> handlesBefore = driver.getWindowHandles();
-
-    	                    // single JS click (avoids double clicks)
-    	                    js.executeScript("arguments[0].scrollIntoView({behavior:'smooth', block:'center'});", link);
-    	                    js.executeScript("arguments[0].click();", link);
-
-    	                    // wait for a new window handle to appear (timeout ~8s)
-    	                    WebDriverWait smallWait = new WebDriverWait(driver, Duration.ofSeconds(8));
-    	                    boolean newHandleAppeared = smallWait.until(d -> driver.getWindowHandles().size() > handlesBefore.size());
-
-    	                    if (!newHandleAppeared) {
-    	                        System.out.println("⚠️ '" + name + "' did not open a new tab/window for this card.");
-    	                        // Still ensure we are back to main window
-    	                        try { driver.switchTo().window(mainWindow); } catch (Exception ignored) {}
-    	                        return;
-    	                    }
-
-    	                    // find the new handle
-    	                    Set<String> handlesAfter = driver.getWindowHandles();
-    	                    handlesAfter.removeAll(handlesBefore);
-    	                    if (handlesAfter.isEmpty()) {
-    	                        System.out.println("⚠️ Unable to identify new tab handle for '" + name + "'.");
-    	                        try { driver.switchTo().window(mainWindow); } catch (Exception ignored) {}
-    	                        return;
-    	                    }
-
-    	                    String newHandle = handlesAfter.iterator().next();
-
-    	                    // Defensive: don't close mainWindow if it was somehow returned
-    	                    if (mainWindow.equals(newHandle)) {
-    	                        System.out.println("⚠️ New handle equals main window for '" + name + "'. Skipping close.");
-    	                        try { driver.switchTo().window(mainWindow); } catch (Exception ignored) {}
-    	                        return;
-    	                    }
-
-    	                    // Switch to new tab, wait for load, then close
-    	                    driver.switchTo().window(newHandle);
-    	                    // wait until document complete (defensive)
-    	                    WebDriverWait pageLoadWait = new WebDriverWait(driver, Duration.ofSeconds(10));
-    	                    pageLoadWait.until(d -> ((JavascriptExecutor) d).executeScript("return document.readyState").equals("complete"));
-    	                    Thread.sleep(600); // tiny stabilizer
-    	                    driver.close();
-    	                } catch (TimeoutException te) {
-    	                    System.out.println("⚠️ Timeout while waiting for new tab for '" + name + "': " + te.getMessage());
-    	                } catch (Exception ex) {
-    	                    System.out.println("⚠️ Error handling new tab for '" + name + "': " + ex.getMessage());
-    	                } finally {
-    	                    // ALWAYS return to main window handle
-    	                    try { driver.switchTo().window(mainWindow); } catch (Exception swEx) {
-    	                        System.out.println("❌ Failed to switch back to main window: " + swEx.getMessage());
-    	                    }
-    	                }
-    	            };
-
-    	            // 1) Click "View Profile" if present
-    	            try {
-    	                WebElement viewProfile = activeCard.findElement(By.xpath(".//a[contains(normalize-space(.),'View Profile')]"));
-    	                safeClickAndCloseNewTab.accept(viewProfile, "View Profile");
-    	                System.out.println("✅ View Profile processed for card " + (i + 1));
-    	            } catch (NoSuchElementException e) {
-    	                System.out.println("⚠️ No 'View Profile' button on card " + (i + 1));
-    	            }
-
-    	            // 2) Click "Book Appointment" if present
-    	            try {
-    	                // re-fetch active card to avoid stale reference
-    	                activeCard = wait.until(ExpectedConditions.visibilityOfElementLocated(
-    	                        By.cssSelector(".swiper-slide-active .elementor-element.e-con-full")));
-    	                WebElement bookBtn = activeCard.findElement(By.xpath(".//a[contains(normalize-space(.),'Book Appointment')]"));
-    	                safeClickAndCloseNewTab.accept(bookBtn, "Book Appointment");
-    	                System.out.println("✅ Book Appointment processed for card " + (i + 1));
-    	            } catch (NoSuchElementException e) {
-    	                System.out.println("⚠️ No 'Book Appointment' button on card " + (i + 1));
-    	            }
-
-    	            // small pause before next iteration
-    	            Thread.sleep(600);
-    	        }
-
-    	        System.out.println("\n🎯 Completed all doctor cards successfully!");
-    	    } catch (Exception e) {
-    	        System.out.println("❌ Automation failed: " + e.getMessage());
-    	        e.printStackTrace();
-    	    }
-    	}
-    
-    public void clickParentWhatsAppButtonForDoctor(String doctorName) throws InterruptedException {
         try {
-            // scroll to the doctor’s card on the main Doctors page
-            By doctorCard = By.xpath("//div[@class='doctor-card'][.//h3[contains(text(),'" + doctorName + "')]]");
-            WebElement card = wait.until(ExpectedConditions.visibilityOfElementLocated(doctorCard));
+            // 1) Scroll to heading
+            WebElement heading = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.xpath("//h2[contains(normalize-space(.),'Other Doctors')]")
+            ));
+            js.executeScript("arguments[0].scrollIntoView({block:'center'});", heading);
 
-            // locate the WhatsApp link/button inside that card
-            By whatsappBtn = By.xpath(".//a[contains(@href,'api.whatsapp.com')]/button[contains(.,'Book Appointment')]");
-            WebElement button = card.findElement(whatsappBtn);
+            // 2) Locate cards under Other Doctors by anchoring on View Profile
+            By cardRoot = By.xpath(
+                    "//h2[contains(normalize-space(.),'Other Doctors')]" +
+                            "/following::a[normalize-space(.)='View Profile']" +
+                            "/ancestor::div[contains(@class,'e-con')][1]"
+            );
 
-            js.executeScript("arguments[0].scrollIntoView({behavior:'smooth', block:'center'});", button);
-            Thread.sleep(1000);
+            // 3) Get all cards, then filter only visible
+            List<WebElement> allCards = wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(cardRoot));
+            List<WebElement> visibleCards = new ArrayList<>();
+            for (WebElement c : allCards) {
+                if (c.isDisplayed()) visibleCards.add(c);
+            }
 
-            // record current window before clicking
-            String parentWindow = driver.getWindowHandle();
-            Set<String> beforeClick = driver.getWindowHandles();
+            System.out.println("Visible Other Doctors cards: " + visibleCards.size());
 
-            js.executeScript("arguments[0].click();", button);
-            System.out.println("🟢 Clicked WhatsApp 'Book Appointment' for: " + doctorName);
+            // 4) Loop by index (re-find each time to avoid stale)
+            for (int i = 0; i < visibleCards.size(); i++) {
 
-            // wait for new WhatsApp tab
-            wait.until(d -> d.getWindowHandles().size() > beforeClick.size());
+                // re-scroll to section each iteration so "back" doesn’t leave you at top
+                heading = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                        By.xpath("//h2[contains(normalize-space(.),'Other Doctors')]")
+                ));
+                js.executeScript("arguments[0].scrollIntoView({block:'center'});", heading);
 
-            // switch to new tab
-            Set<String> afterClick = driver.getWindowHandles();
-            afterClick.removeAll(beforeClick);
-            String newTab = afterClick.iterator().next();
-            driver.switchTo().window(newTab);
-            //System.out.println("✅ Switched to WhatsApp tab: " + driver.getCurrentUrl());
+                // re-fetch + re-filter visible to avoid stale references
+                allCards = wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(cardRoot));
+                visibleCards = new ArrayList<>();
+                for (WebElement c : allCards) {
+                    if (c.isDisplayed()) visibleCards.add(c);
+                }
 
-            Thread.sleep(3000); // optional wait to observe WhatsApp
+                if (i >= visibleCards.size()) break; // safety
 
-            // close WhatsApp tab and return to parent
-            driver.close();
-            driver.switchTo().window(parentWindow);
-            System.out.println("✅ Closed WhatsApp tab and returned to parent: " + doctorName);
+                WebElement card = visibleCards.get(i);
+                js.executeScript("arguments[0].scrollIntoView({block:'center'});", card);
+
+                // Optional: doctor name for logs
+                String doctorName = "";
+                try {
+                    doctorName = card.findElement(By.cssSelector("h4.elementor-heading-title")).getText().trim();
+                } catch (Exception ignored) {}
+                System.out.println("Card " + (i + 1) + ": " + doctorName);
+
+                // ---- Click View Profile, then BACK (or close tab) ----
+                try {
+                    WebElement viewProfile = card.findElement(
+                            By.xpath(".//a[normalize-space(.)='View Profile']")
+                    );
+                    clickAndReturnToSamePage(viewProfile, wait, js, 2500); // ✅ stay 2.5s
+                } catch (NoSuchElementException ignored) {}
+
+                // After returning, re-scroll again to keep context
+                heading = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                        By.xpath("//h2[contains(normalize-space(.),'Other Doctors')]")
+                ));
+                js.executeScript("arguments[0].scrollIntoView({block:'center'});", heading);
+
+                // Re-fetch the card again (DOM might have changed after back)
+                allCards = wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(cardRoot));
+                visibleCards = new ArrayList<>();
+                for (WebElement c : allCards) {
+                    if (c.isDisplayed()) visibleCards.add(c);
+                }
+                if (i >= visibleCards.size()) break;
+                card = visibleCards.get(i);
+
+                // ---- Click Book Appointment, then BACK (or close modal/tab) ----
+                try {
+                    // Desktop trigger (your HTML shows this)
+                    WebElement bookDesktop = card.findElement(
+                            By.xpath(".//div[contains(@class,'triger-carecansole')]//a[normalize-space(.)='Book Appointment']")
+                    );
+                    clickBookAppointmentAndReturn(bookDesktop, wait, js, 2500); // ✅ stay 2.5s
+                } catch (NoSuchElementException e) {
+                    // Mobile tel: link fallback
+                    try {
+                        WebElement bookMobile = card.findElement(
+                                By.xpath(".//a[starts-with(@href,'tel:') and normalize-space(.)='Book Appointment']")
+                        );
+                        clickAndReturnToSamePage(bookMobile, wait, js, 2500); // ✅ stay 2.5s
+                    } catch (NoSuchElementException ignored) {}
+                }
+            }
 
         } catch (Exception e) {
-            System.out.println("❌ Failed to click WhatsApp for " + doctorName + ": " + e.getMessage());
+            e.printStackTrace();
         }
     }
+
+    /**
+     * Click element, wait a few seconds on the opened page/tab, then ALWAYS return.
+     * - If new tab: switch, wait, close, return.
+     * - If same tab navigation: wait, then back.
+     */
+    private void clickAndReturnToSamePage(WebElement link, WebDriverWait wait, JavascriptExecutor js, long stayMs) {
+        try {
+            String parentWindow = driver.getWindowHandle();
+            Set<String> beforeWindows = driver.getWindowHandles();
+            String returnUrl = driver.getCurrentUrl();
+
+            js.executeScript("arguments[0].scrollIntoView({block:'center'});", link);
+            js.executeScript("arguments[0].click();", link);
+
+            WebDriverWait smallWait = new WebDriverWait(driver, Duration.ofSeconds(10));
+            smallWait.until(d ->
+                    d.getWindowHandles().size() > beforeWindows.size()
+                            || !d.getCurrentUrl().equals(returnUrl)
+            );
+
+            Set<String> afterWindows = driver.getWindowHandles();
+
+            // New tab opened
+            if (afterWindows.size() > beforeWindows.size()) {
+                afterWindows.removeAll(beforeWindows);
+                String newTab = afterWindows.iterator().next();
+                driver.switchTo().window(newTab);
+
+                // ✅ Stay on new tab/page for a few seconds
+                Thread.sleep(stayMs);
+
+                driver.close();
+                driver.switchTo().window(parentWindow);
+            } else {
+                // ✅ Same tab navigation -> stay then go back
+                Thread.sleep(stayMs);
+
+                driver.navigate().back();
+                wait.until(ExpectedConditions.urlToBe(returnUrl));
+            }
+
+        } catch (Exception ignored) {}
+    }
+
+    /**
+     * Book Appointment often opens a JS modal (href="#").
+     * - If it navigates: wait a few seconds, then back.
+     * - If it opens a modal: wait a few seconds, then close it.
+     */
+    private void clickBookAppointmentAndReturn(WebElement bookBtn, WebDriverWait wait, JavascriptExecutor js, long stayMs) {
+        try {
+            String returnUrl = driver.getCurrentUrl();
+
+            js.executeScript("arguments[0].scrollIntoView({block:'center'});", bookBtn);
+            js.executeScript("arguments[0].click();", bookBtn);
+
+            // If it navigates away, we wait then go back.
+            // If it doesn't navigate, it likely opened a modal — wait then close it.
+            WebDriverWait smallWait = new WebDriverWait(driver, Duration.ofSeconds(6));
+            boolean navigated = false;
+
+            try {
+                smallWait.until(ExpectedConditions.not(ExpectedConditions.urlToBe(returnUrl)));
+                navigated = true;
+            } catch (Exception ignored) {}
+
+            if (navigated) {
+                // ✅ stay on navigated page for a few seconds
+                Thread.sleep(stayMs);
+
+                driver.navigate().back();
+                wait.until(ExpectedConditions.urlToBe(returnUrl));
+                return;
+            }
+
+            // Modal case (MOST LIKELY):
+            // ✅ stay with modal open for a few seconds
+            Thread.sleep(stayMs);
+
+            // Update selectors if your popup uses different close button
+            By modalClose = By.cssSelector(".dialog-close-button, .elementor-popup-modal .dialog-close-button");
+            List<WebElement> closeBtns = driver.findElements(modalClose);
+            if (!closeBtns.isEmpty() && closeBtns.get(0).isDisplayed()) {
+                js.executeScript("arguments[0].click();", closeBtns.get(0));
+            }
+
+        } catch (Exception ignored) {}
+    }
+
+    public void clickParentWhatsAppButtonForDoctor(String doctorName) {
+
+        try {
+            // Locate doctor card
+            By doctorCard = By.xpath(
+                "//div[@class='doctor-card'][.//h3[contains(normalize-space(),'" + doctorName + "')]]"
+            );
+            WebElement card = wait.until(
+                ExpectedConditions.visibilityOfElementLocated(doctorCard)
+            );
+
+            // Correct WhatsApp button selector (BUTTON, not A)
+            By whatsappBtn = By.xpath(
+                ".//button[contains(@class,'doctor-book-btn') and normalize-space()='Book Appointment']"
+            );
+            WebElement button = card.findElement(whatsappBtn);
+
+            // Capture state BEFORE click
+            String returnUrl = driver.getCurrentUrl();
+            Long scrollY = (Long) js.executeScript("return window.pageYOffset;");
+
+            js.executeScript("arguments[0].scrollIntoView({block:'center'});", button);
+
+            // Dispatch real click event (JS-bound)
+            js.executeScript(
+                "arguments[0].dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));",
+                button
+            );
+
+            System.out.println("🟢 Clicked WhatsApp Book Appointment for: " + doctorName);
+
+            // Wait until WhatsApp loads in SAME TAB
+            WebDriverWait smallWait = new WebDriverWait(driver, Duration.ofSeconds(8));
+            smallWait.until(d -> d.getCurrentUrl().contains("api.whatsapp.com"));
+
+            // Navigate back to previous page
+            driver.navigate().to(returnUrl);
+            smallWait.until(ExpectedConditions.urlToBe(returnUrl));
+
+            // Restore scroll position (same section)
+            js.executeScript("window.scrollTo(0, arguments[0]);", scrollY);
+
+            System.out.println("✅ Returned to same section for doctor: " + doctorName);
+
+        } catch (Exception e) {
+            System.out.println("❌ Failed WhatsApp click for " + doctorName + ": " + e.getMessage());
+        }
+    }
+
 
 
  // 1️⃣ Switch to a newly opened window
- public void switchToNewWindow() {
-	   // Switch to newly opened child window
-   wait.until(d -> driver.getWindowHandles().size() > 1);
-   Set<String> allWindows = driver.getWindowHandles();
-   String currentWindow = driver.getWindowHandle();
-   for (String window : allWindows) {
-       if (!window.equals(currentWindow)) {
-           driver.switchTo().window(window);
-           break;
+    public String switchToNewWindow() {
+        String parent = driver.getWindowHandle();
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+
+        wait.until(driver -> driver.getWindowHandles().size() > 1);
+
+        for (String handle : driver.getWindowHandles()) {
+            if (!handle.equals(parent)) {
+                driver.switchTo().window(handle);
+                System.out.println("🔄 Switched to new window: " + driver.getCurrentUrl());
+                return handle;
+            }
         }
+        return parent;
     }
- }
+
 
  // 2️⃣ Close current window and switch back to parent
  public void closeCurrentWindowAndSwitchBack(String parentWindow) {
@@ -523,6 +684,7 @@ public class allDoctorCards {
      driver.switchTo().window(parentWindow);
      System.out.println("✅ Closed current window and switched back to parent: " + parentWindow);
  }
+ 
 
 }
 

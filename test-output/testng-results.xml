@@ -1,25 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testng-results ignored="0" total="1" passed="1" failed="0" skipped="0">
+<testng-results ignored="0" total="2" passed="2" failed="0" skipped="0">
   <reporter-output>
   </reporter-output>
-  <suite started-at="2025-11-18T18:51:56 IST" name="Default suite" finished-at="2025-11-18T18:52:04 IST" duration-ms="8123">
+  <suite started-at="2026-02-24T19:19:08 IST" name="Default suite" finished-at="2026-02-24T19:19:49 IST" duration-ms="41926">
     <groups>
     </groups>
-    <test started-at="2025-11-18T18:51:56 IST" name="Default test" finished-at="2025-11-18T18:52:04 IST" duration-ms="8123">
-      <class name="org.example.tests.allTreatmentsTest">
-        <test-method is-config="true" signature="setUp()[pri:0, instance:org.example.tests.allTreatmentsTest@5b247367]" started-at="2025-11-18T18:51:56 IST" name="setUp" finished-at="2025-11-18T18:51:59 IST" duration-ms="3059" status="PASS">
+    <test started-at="2026-02-24T19:19:08 IST" name="Default test" finished-at="2026-02-24T19:19:49 IST" duration-ms="41926">
+      <class name="org.example.tests.ForPatientsTest">
+        <test-method is-config="true" signature="setUpOnce()[pri:0, instance:org.example.tests.ForPatientsTest@1a75e76a]" started-at="2026-02-24T19:19:08 IST" name="setUpOnce" finished-at="2026-02-24T19:19:09 IST" duration-ms="1631" status="PASS">
           <reporter-output>
           </reporter-output>
-        </test-method> <!-- setUp -->
-        <test-method is-config="true" signature="setUpTreatmentsHandler()[pri:0, instance:org.example.tests.allTreatmentsTest@5b247367]" started-at="2025-11-18T18:51:59 IST" name="setUpTreatmentsHandler" finished-at="2025-11-18T18:51:59 IST" duration-ms="24" status="PASS">
+        </test-method> <!-- setUpOnce -->
+        <test-method is-config="true" signature="goHome()[pri:0, instance:org.example.tests.ForPatientsTest@1a75e76a]" started-at="2026-02-24T19:19:09 IST" name="goHome" finished-at="2026-02-24T19:19:10 IST" duration-ms="1039" status="PASS">
           <reporter-output>
           </reporter-output>
-        </test-method> <!-- setUpTreatmentsHandler -->
-        <test-method signature="testClickViewMore()[pri:14, instance:org.example.tests.allTreatmentsTest@5b247367]" started-at="2025-11-18T18:51:59 IST" name="testClickViewMore" finished-at="2025-11-18T18:52:04 IST" duration-ms="4968" status="PASS">
+        </test-method> <!-- goHome -->
+        <test-method signature="verifyForPatientsDropdownAndInsuranceInternalTesting()[pri:1, instance:org.example.tests.ForPatientsTest@1a75e76a]" started-at="2026-02-24T19:19:10 IST" name="verifyForPatientsDropdownAndInsuranceInternalTesting" finished-at="2026-02-24T19:19:18 IST" duration-ms="7795" status="PASS">
           <reporter-output>
           </reporter-output>
-        </test-method> <!-- testClickViewMore -->
-      </class> <!-- org.example.tests.allTreatmentsTest -->
+        </test-method> <!-- verifyForPatientsDropdownAndInsuranceInternalTesting -->
+        <test-method is-config="true" signature="goHome()[pri:0, instance:org.example.tests.ForPatientsTest@1a75e76a]" started-at="2026-02-24T19:19:18 IST" name="goHome" finished-at="2026-02-24T19:19:18 IST" duration-ms="381" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- goHome -->
+        <test-method signature="verifyForPatientsDropdownAndBlogsInternalTesting()[pri:2, instance:org.example.tests.ForPatientsTest@1a75e76a]" started-at="2026-02-24T19:19:18 IST" name="verifyForPatientsDropdownAndBlogsInternalTesting" finished-at="2026-02-24T19:19:49 IST" duration-ms="31008" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- verifyForPatientsDropdownAndBlogsInternalTesting -->
+      </class> <!-- org.example.tests.ForPatientsTest -->
     </test> <!-- Default test -->
   </suite> <!-- Default suite -->
 </testng-results>

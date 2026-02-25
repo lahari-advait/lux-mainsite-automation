@@ -1,448 +1,772 @@
 package org.example.pages;
+import java.util.*;
 
+import org.example.base.BasePage;
+import data.TreatmentData;
 import org.openqa.selenium.*;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
+
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-public class allTreatments {
+public class AllTreatments extends BasePage {
 
-    private WebDriver driver;
-    private WebDriverWait wait;
-    private JavascriptExecutor js;
+    // ---------------- LOCATORS ----------------
+    private final By treatmentsMenu = By.linkText("Treatments");
+    private final By departments = By.cssSelector("#departments-list li.department___listitem");
+    private final By activeDepartmentBox = By.cssSelector(".department-box.active");
+    private final By activeSubDepartments = By.cssSelector(".department-box.active .inside__parent__box > a");
+    private final Set<Integer> whatsappClickedCards = new HashSet<>();
+    private final By bookAppointmentBtn = By.xpath(
+    	    "//a[contains(normalize-space(.),'Book Appointment') and not(contains(@style,'display:none'))]"
+    	);
+    
 
-    private By treatmentsMenu = By.linkText("Treatments");
-    private By bookAppointmentButton = By.xpath("//a[contains(@href,'whatsapp')]");
-    private By faqAccordions = By.cssSelector("div.accordion");
-
-    public allTreatments(WebDriver driver) {
-        this.driver = driver;
-        this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-        this.js = (JavascriptExecutor) driver;
+    // ---------------- CONSTRUCTOR ----------------
+    public AllTreatments(WebDriver driver) {
+        super(driver);
     }
 
-    // ================== Hover & Navigation ==================
     public void hoverOverTreatments() {
-        Actions actions = new Actions(driver);
-        WebElement menu = wait.until(ExpectedConditions.visibilityOfElementLocated(treatmentsMenu));
-        actions.moveToElement(menu).pause(Duration.ofMillis(500)).perform();
-        System.out.println("✅ Hovered over 'Treatments' menu");
+
+        WebElement menu = wait.until(
+            ExpectedConditions.visibilityOfElementLocated(treatmentsMenu)
+        );
+
+        js.executeScript(
+            "arguments[0].scrollIntoView({block:'center'});",
+            menu
+        );
+
+        // 🔴 HIGHLIGHT Treatments
+        highlight(menu);
+
+        // JS hover (stable)
+        js.executeScript(
+            "arguments[0].dispatchEvent(new MouseEvent('mouseover', {" +
+            "bubbles:true,cancelable:true,view:window}));",
+            menu
+        );
+
+        // Physical hover fallback
+        new Actions(driver)
+            .moveToElement(menu)
+            .pause(Duration.ofMillis(400))
+            .perform();
+
+        try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+
+        System.out.println("✅ Hovered Treatments menu (highlighted)");
     }
 
-    public void clickTreatmentCategory(String categoryName) {
-        By categoryLocator = By.xpath("//span[text()='" + categoryName + "']");
-        WebElement category = wait.until(ExpectedConditions.elementToBeClickable(categoryLocator));
-        js.executeScript("arguments[0].scrollIntoView({block:'center'})", category);
-        category.click();
-        System.out.println("✅ Clicked treatment category: " + categoryName);
+//    private void highlight(WebElement element) {
+//        js.executeScript(
+//            "arguments[0].style.outline='3px solid red';" +
+//            "arguments[0].style.background='#fff3cd';",
+//            element
+//        );
+//    }
+
+    private void openTreatment(String department, String subDepartment) {
+
+        String deptSlug = department.toLowerCase().replace(" ", "-");
+        String subSlug  = subDepartment.toLowerCase().replace(" ", "-");
+
+        String url = "https://luxhospitals.com/treatments/"
+                     + deptSlug + "/" + subSlug + "/";
+
+        driver.get(url);
+
+        wait.until(ExpectedConditions.urlContains(subSlug));
+        wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
     }
 
-    public void clickSpecificTreatment(String treatmentName) {
-        By treatmentLink = By.linkText(treatmentName);
-        WebElement treatment = wait.until(ExpectedConditions.elementToBeClickable(treatmentLink));
-        js.executeScript("arguments[0].scrollIntoView({block:'center'})", treatment);
-        treatment.click();
-        System.out.println("✅ Clicked on treatment: " + treatmentName);
+    private void ensureOnHomePage() {
+        if (!driver.getCurrentUrl().equals("https://luxhospitals.com/")) {
+            driver.get("https://luxhospitals.com/");
+            wait.until(ExpectedConditions.visibilityOfElementLocated(treatmentsMenu));
+        }
     }
+    private void clickBookAppointmentIfPresent(String parentWindow) {
 
-    // ================== Book Appointment ==================
-    public void clickBookAppointment() {
         try {
-            WebElement button = wait.until(ExpectedConditions.elementToBeClickable(bookAppointmentButton));
-            js.executeScript("arguments[0].scrollIntoView({block:'center'})", button);
-            js.executeScript("arguments[0].click();", button);
+            List<WebElement> buttons = driver.findElements(bookAppointmentBtn);
 
-            String originalTab = driver.getWindowHandle();
-            wait.until(d -> driver.getWindowHandles().size() > 1);
-
-            for (String handle : driver.getWindowHandles()) {
-                if (!handle.equals(originalTab)) {
-                    driver.switchTo().window(handle);
-                    break;
-                }
+            if (buttons.isEmpty()) {
+                System.out.println("     ⚠ Book Appointment CTA not found on this page");
+                return;
             }
 
-            wait.until(ExpectedConditions.urlContains("https"));
-            System.out.println("🟢 Opened WhatsApp URL: " + driver.getCurrentUrl());
+            WebElement btn = buttons.get(0);
 
-            driver.close();
-            driver.switchTo().window(originalTab);
-        } catch (Exception e) {
-            System.out.println("❌ Failed to open WhatsApp URL: " + e.getMessage());
-        }
-    }
+            js.executeScript(
+                "arguments[0].scrollIntoView({block:'center'});",
+                btn
+            );
+            Thread.sleep(500);
 
-    // ================== FAQ Section ==================
-    public void testAllFaqAccordions() {
-        List<WebElement> accordions = driver.findElements(faqAccordions);
-        for (WebElement accordion : accordions) {
-            try {
-                WebElement question = accordion.findElement(By.cssSelector(".accordion_head > span"));
-                js.executeScript("arguments[0].scrollIntoView({block:'center'})", question);
-                wait.until(ExpectedConditions.elementToBeClickable(question));
-                js.executeScript("arguments[0].click();", question);
+            highlight(btn);
+            System.out.println("     ➜ Clicking Book Appointment CTA");
 
-                WebElement answer = accordion.findElement(By.cssSelector(".accordion_content .faq_answer"));
-                wait.until(ExpectedConditions.visibilityOf(answer));
+            Set<String> beforeHandles = driver.getWindowHandles();
+            jsClick(btn);
 
-                System.out.println("FAQ: " + question.getText() + " => Answer: " + answer.getText());
-            } catch (Exception e) {
-                System.out.println("⚠️ Skipped an accordion due to error: " + e.getMessage());
-            }
-        }
-    }
+            String newTab = waitForNewTab(beforeHandles, 6);
 
-    // ================== Testimonials ==================
-    public void scrollToTestimonialsAndClickDots() throws InterruptedException {
-        By testimonialsHeader = By.xpath("//h2[contains(text(),'Testimonials')]");
-        WebElement header = wait.until(ExpectedConditions.visibilityOfElementLocated(testimonialsHeader));
-
-        js.executeScript("arguments[0].scrollIntoView({behavior:'smooth', block:'center'})", header);
-        System.out.println("✅ Scrolled to Testimonials section.");
-        Thread.sleep(2000);
-
-        By dots = By.cssSelector(".testimonial-dots span.dot");
-        List<WebElement> dotElements = wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(dots));
-
-        for (int i = 0; i < dotElements.size(); i++) {
-            try {
-                WebElement dot = dotElements.get(i);
-                js.executeScript("arguments[0].scrollIntoView({block:'center'})", dot);
-                js.executeScript("arguments[0].click();", dot);
-                System.out.println("🟢 Clicked dot #" + (i + 1));
-                Thread.sleep(2000);
-            } catch (Exception e) {
-                System.out.println("⚠️ Could not click dot #" + (i + 1) + ": " + e.getMessage());
-            }
-        }
-    }
-
-    // ================== Latest Health Articles ==================
-    public void scrollToLatestHealthArticles() throws InterruptedException {
-        try {
-            By headingLocator = By.xpath("//h2[contains(text(),'Latest Health Articles by Lux')]");
-            WebElement heading = wait.until(ExpectedConditions.visibilityOfElementLocated(headingLocator));
-
-            js.executeScript("arguments[0].scrollIntoView({behavior:'smooth', block:'center'})", heading);
-            System.out.println("✅ Scrolled to 'Latest Health Articles by Lux' section.");
-            Thread.sleep(1500);
-
-            List<WebElement> titles = wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector(".card-title a")));
-            System.out.println("✅ Found " + titles.size() + " article cards.");
-
-            String parentWindow = driver.getWindowHandle();
-
-            for (int i = 0; i < titles.size(); i++) {
-                titles = driver.findElements(By.cssSelector(".card-title a"));
-                WebElement title = titles.get(i);
-                js.executeScript("arguments[0].scrollIntoView({block:'center'})", title);
-                wait.until(ExpectedConditions.elementToBeClickable(title));
-
-                Set<String> oldWindows = driver.getWindowHandles();
-                js.executeScript("arguments[0].click();", title);
-                wait.until(d -> d.getWindowHandles().size() > oldWindows.size());
-
-                Set<String> newWindows = driver.getWindowHandles();
-                newWindows.removeAll(oldWindows);
-                String newTab = newWindows.iterator().next();
-
+            if (newTab != null) {
                 driver.switchTo().window(newTab);
-                wait.until(wd -> js.executeScript("return document.readyState").equals("complete"));
-                System.out.println("🟢 Opened article #" + (i + 1) + ": " + driver.getCurrentUrl());
-
+                Thread.sleep(800);
                 driver.close();
                 driver.switchTo().window(parentWindow);
             }
 
-            System.out.println("🎉 Finished checking all articles.");
+            wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
+
         } catch (Exception e) {
-            System.out.println("❌ Failed in 'scrollToLatestHealthArticles': " + e.getMessage());
+            System.out.println("     ⚠ Book Appointment CTA skipped safely");
         }
     }
 
-    // ================== Click All Section Links One by One ==================
-    public void clickAllSectionLinksOneByOne() throws InterruptedException {
+
+
+    // ---------------- DATA-DRIVEN RUNNER ----------------
+    public void runTestsFromData(List<TreatmentData> data, String parentWindow) throws Exception {
+
+        for (TreatmentData td : data) {
+
+            System.out.println("\n▶ " + td.getDepartment() + " -> " + td.getSubDepartment());
+
+            openTreatmentByUrl(td);   // ✅ CORRECT
+
+            runInsideSubDepartmentTests(parentWindow);
+        }
+    }
+
+    private void openTreatmentByUrl(TreatmentData td) {
+
+        System.out.println("➡ Opening URL: " + td.getUrl());
+
+        driver.get(td.getUrl());
+
+        wait.until(ExpectedConditions.urlToBe(td.getUrl()));
+        wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
+    }
+
+
+
+    // ---------------- CLICK DEPARTMENT BY NAME ----------------
+//    private void clickDepartmentByName(String name) {
+//
+//        // ✅ ENSURE menu is open before reading departments
+//        hoverOverTreatments();
+//
+//        List<WebElement> depts = driver.findElements(departments);
+//
+//        for (WebElement d : depts) {
+//            String text = d.getText().trim();
+//            if (text.equalsIgnoreCase(name)) {
+//                WebElement box = d.findElement(By.cssSelector(".flexx___box"));
+//                jsClick(box);
+//                wait.until(ExpectedConditions.visibilityOfElementLocated(activeDepartmentBox));
+//                return;
+//            }
+//        }
+//
+//        throw new RuntimeException("Department not found: " + name);
+//    }
+//
+//
+//    // ---------------- CLICK SUB-DEPARTMENT BY NAME ----------------
+//    private void clickSubDepartmentByName(String name) {
+//
+//        List<WebElement> subs = driver.findElements(activeSubDepartments);
+//
+//        for (WebElement s : subs) {
+//            String text = s.getText().trim();
+//            if (text.equalsIgnoreCase(name)) {
+//                String beforeUrl = driver.getCurrentUrl();
+//                jsClick(s);
+//                wait.until(ExpectedConditions.not(ExpectedConditions.urlToBe(beforeUrl)));
+//                return;
+//            }
+//        }
+//        throw new RuntimeException("Sub-department not found under active department: " + name);
+//    }
+    private void runInsideSubDepartmentTests(String parentWindow) throws Exception {
+    	 System.out.println("     ▶ Running inside tests");
+         Thread.sleep(1000);
+
+         // 1️⃣ DOCTOR CARDS — CONTENT FIRST
+         // Use the handleAllDoctorCards method to handle all locator logic (primary, fallback, secondary)
+         handleAllDoctorCards(parentWindow);
+         
+         // After handling the doctor cards, we add a delay to simulate the processing time
+         Thread.sleep(1500); // ⏸ after doctor cards
+
+
+        // 2️⃣ SECTION NAVIGATION
+        clickAllSectionLinksOneByOne();
+        Thread.sleep(1500); // ⏸ after section navigation
+
+        // 3️⃣ TESTIMONIALS
+        if (!driver.findElements(By.cssSelector(".testimonial-dots span.dot")).isEmpty()) {
+            scrollToTestimonialsAndClickDots();
+            Thread.sleep(1500); // ⏸ after testimonials
+        }
+
+        // 4️⃣ ARTICLES
+        if (!driver.findElements(By.cssSelector(".card-title a")).isEmpty()) {
+            scrollToLatestHealthArticles(parentWindow);
+            Thread.sleep(1500); // ⏸ after articles
+        }
+
+        // 5️⃣ BOOK APPOINTMENT — LAST (NAV MUTATION)
+        handleBookAppointment(parentWindow);
+        Thread.sleep(1500); // ⏸ after final book appointment
+    }
+
+
+
+
+    // ---------------- JS CLICK ----------------
+    public void jsClick(WebElement element) {
+        js.executeScript("arguments[0].scrollIntoView({block:'center'});", element);
+        js.executeScript("arguments[0].click();", element);
+    }
+
+    // ---------------- DOCTOR CARDS ----------------
+//    public void handleAllDoctorCards(String parentWindow) {
+//        try {
+//            By cardLocator = By.cssSelector("div[class$='-doctor-card']");
+//            By bookBtn = By.cssSelector("button[class*='doctor-card-book-btn']");
+//            By profileBtn = By.cssSelector("button[class*='doctor-card-appointment-btn']");
+//
+//            List<WebElement> visibleCards = driver.findElements(cardLocator)
+//                    .stream().filter(WebElement::isDisplayed).toList();
+//
+//            if (visibleCards.isEmpty()) {
+//                System.out.println("     ➜ Doctor cards: 0 visible (skipping)");
+//                return;
+//            }
+//
+//            System.out.println("     ➜ Doctor cards (visible): " + visibleCards.size());
+//
+//            for (int i = 0; i < visibleCards.size(); i++) {
+//                clickDoctorButtonVisible(cardLocator, i, bookBtn, parentWindow);     // WhatsApp once per card
+//                clickDoctorButtonVisible(cardLocator, i, profileBtn, parentWindow); // View Profile once per card
+//            }
+//
+//        } catch (Exception e) {
+//            System.out.println("❌ Doctor card test failed: " + e.getMessage());
+//        }
+//    }
+//
+//    private void clickDoctorButtonVisible(By cardLocator, int visibleIndex, By buttonLocator, String parentWindow) {
+//        try {
+//            List<WebElement> visibleCards =
+//                    driver.findElements(cardLocator).stream().filter(WebElement::isDisplayed).toList();
+//
+//            if (visibleIndex >= visibleCards.size()) return;
+//
+//            WebElement card = visibleCards.get(visibleIndex);
+//            List<WebElement> buttons = card.findElements(buttonLocator);
+//            if (buttons.isEmpty()) return;
+//
+//            WebElement button = buttons.get(0);
+//            String returnUrl = driver.getCurrentUrl();
+//            Set<String> beforeHandles = driver.getWindowHandles();
+//
+//            js.executeScript("arguments[0].scrollIntoView({block:'center'});", button);
+//            Thread.sleep(150);
+//            jsClick(button);
+//
+//            String newTab = waitForNewTab(beforeHandles, 6);
+//
+//            if (newTab != null) {
+//                driver.switchTo().window(newTab);
+//                Thread.sleep(400);
+//                driver.close();
+//                driver.switchTo().window(parentWindow);
+//                wait.until(ExpectedConditions.urlToBe(returnUrl));
+//            } else {
+//                if (!driver.getCurrentUrl().equals(returnUrl)) {
+//                    driver.get(returnUrl);
+//                    wait.until(ExpectedConditions.urlToBe(returnUrl));
+//                }
+//            }
+//
+//            wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(cardLocator));
+//
+//        } catch (Exception e) {
+//            System.out.println("⚠ Doctor action failed: " + e.getMessage());
+//        }
+//    }
+
+    private String waitForNewTab(Set<String> oldHandles, int timeoutSeconds) {
+        for (int i = 0; i < timeoutSeconds * 2; i++) {
+            Set<String> current = driver.getWindowHandles();
+            if (current.size() > oldHandles.size()) {
+                current.removeAll(oldHandles);
+                return current.iterator().next();
+            }
+            try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+        }
+        return null;
+    }
+
+    // ---------------- SECTION LINKS ----------------
+    public void clickAllSectionLinksOneByOne() {
         try {
-            By indexLinks = By.cssSelector(".index-scroll-container a.clickable");
-            List<WebElement> links = wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(indexLinks));
+            By linkLocator = By.cssSelector(".index-scroll-container a.clickable");
+            int linkCount = driver.findElements(linkLocator).size();
 
-            System.out.println("✅ Found " + links.size() + " section links in the index container.");
-            Thread.sleep(1500);
-
-            for (int i = 0; i < links.size(); i++) {
-                links = driver.findElements(indexLinks);
+            for (int i = 0; i < linkCount; i++) {
+                List<WebElement> links = driver.findElements(linkLocator);
                 WebElement link = links.get(i);
 
-                String linkText = link.getText().trim();
-                String href = link.getAttribute("href");
+                String text = link.getText().trim().toLowerCase();
 
-                js.executeScript("arguments[0].scrollIntoView({behavior:'smooth', block:'center'})", link);
-                wait.until(ExpectedConditions.elementToBeClickable(link));
+                jsClick(link);
+                Thread.sleep(500);
 
-                js.executeScript("arguments[0].click();", link);
-                System.out.println("🟢 Clicked section link: " + linkText + " (" + href + ")");
+                if (text.contains("faq")) testAllFaqAccordions();
+                if (text.contains("testimonial")) scrollToTestimonialsAndClickDots();
+                if (text.contains("article")) scrollToLatestHealthArticles(driver.getWindowHandle());
 
-                Thread.sleep(2500);
-
-                if (i == links.size() - 1) {
-                    System.out.println("✨ Last section link clicked — running FAQ accordion tests...");
-                    testAllFaqAccordions();
-                }
+                js.executeScript("window.scrollTo(0,0)");
+                Thread.sleep(250);
             }
-
-            System.out.println("🎉 Finished clicking all index section links one by one!");
         } catch (Exception e) {
-            System.out.println("❌ Failed while clicking index links: " + e.getMessage());
-        }
-    }
-    public void testWhatsAppEnquiryPositive() {
-        String message = "this is a test message";
-        try {
-            WebElement input = driver.findElement(By.id("messageInput"));
-            WebElement sendButton = driver.findElement(By.cssSelector("form.luxgpt-input-row button[type='submit']"));
-
-            input.clear();
-
-            // Type character by character for visual effect
-            for (char c : message.toCharArray()) {
-                input.sendKeys(String.valueOf(c));
-                Thread.sleep(150); // adjust speed for visibility
-            }
-            System.out.println("✅ Positive Scenario: Message entered visibly.");
-
-            scrollIntoView(sendButton);
-            highlight(sendButton);
-
-            Set<String> oldTabs = driver.getWindowHandles();
-            sendButton.click();
-            Thread.sleep(2000);
-            removeHighlight(sendButton);
-
-            // Verify new tab opened
-            Set<String> newTabs = driver.getWindowHandles();
-            newTabs.removeAll(oldTabs);
-            if (!newTabs.isEmpty()) {
-                String newTab = newTabs.iterator().next();
-                driver.switchTo().window(newTab);
-                System.out.println("🔗 Positive Scenario: New Tab URL - " + driver.getCurrentUrl());
-                Thread.sleep(2000);
-                driver.close();
-                driver.switchTo().window(oldTabs.iterator().next());
-            } else {
-                System.out.println("❌ Positive Scenario failed: No tab opened after sending message.");
-            }
-
-        } catch (Exception e) {
-            System.out.println("❌ WhatsApp Positive test failed: " + e.getMessage());
-        }
-    }
-    public void testWhatsAppEnquiryNegative() throws InterruptedException {
-        try {
-            System.out.println("\n?? Negative Scenario: Input is empty. Attempting to send...");
-
-            WebElement input = wait.until(ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector("#messageInput")));
-            WebElement sendButton = wait.until(ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector("form.luxgpt-input-row button[type='submit']")));
-
-            input.clear(); // ensure empty
-            scrollIntoView(sendButton);
-            highlight(sendButton);
-
-            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", sendButton);
-
-            Thread.sleep(1500); // wait for popup
-
-            System.out.println("✅ WhatsApp Negative test executed (popup should appear).");
-            removeHighlight(sendButton);
-
-        } catch (Exception e) {
-            System.out.println("❌ WhatsApp Negative test failed: " + e.getMessage());
-        }
-    }
-    private void scrollIntoView(WebElement element) {
-        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", element);
-    }
-
-    private void highlight(WebElement element) {
-        ((JavascriptExecutor) driver).executeScript("arguments[0].style.border='2px solid red'", element);
-    }
-
-    private void removeHighlight(WebElement element) {
-        ((JavascriptExecutor) driver).executeScript("arguments[0].style.border=''", element);
-    }
-    public void handleAllDoctorCards() throws InterruptedException {
-        try {
-            JavascriptExecutor js = (JavascriptExecutor) driver;
-            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-
-            js.executeScript("window.scrollBy(0, 800);");
-            Thread.sleep(1000);
-
-            // 🩺 Find doctor cards (both mobile & desktop, visible only)
-            List<WebElement> cards = driver.findElements(
-                    By.xpath("//div[contains(@class,'doctor-card-mobile-main') or contains(@class,'doctor-card-desktop-main')]")
-            );
-
-            // Filter only visible cards (avoid duplicates)
-            List<WebElement> visibleCards = new ArrayList<>();
-            for (WebElement card : cards) {
-                if (card.isDisplayed()) {
-                    visibleCards.add(card);
-                }
-            }
-
-            if (visibleCards.isEmpty()) {
-                System.out.println("⚠️ No visible doctor cards found on this page.");
-                return;
-            }
-
-            System.out.println("👩‍⚕️ Found " + visibleCards.size() + " visible doctor card(s).");
-            String parentWindow = driver.getWindowHandle();
-
-            // 🎯 Loop through visible cards only
-            for (int i = 0; i < visibleCards.size(); i++) {
-                WebElement card = visibleCards.get(i);
-                js.executeScript("arguments[0].scrollIntoView({block:'center'});", card);
-                Thread.sleep(800);
-                System.out.println("➡️ Handling doctor card #" + (i + 1));
-
-                // 1️⃣ --- Book Appointment ---
-                try {
-                    WebElement bookBtn = card.findElement(
-                            By.xpath(".//button[contains(@class,'doctor-card-book-btn-desktop') or contains(@class,'doctor-card-book-btn-mobile')]")
-                    );
-                    if (bookBtn.isDisplayed()) {
-                        js.executeScript("arguments[0].click();", bookBtn);
-                        System.out.println("🩺 Clicked Book Appointment...");
-                        Thread.sleep(2000);
-                        closeNewTabAndReturn(parentWindow);
-                    }
-                } catch (Exception e) {
-                    System.out.println("⚠️ No visible Book Appointment button for card #" + (i + 1));
-                }
-
-                Thread.sleep(1000);
-
-                // 2️⃣ --- View Profile ---
-                try {
-                    WebElement profileBtn = card.findElement(
-                            By.xpath(".//button[contains(@class,'doctor-card-appointment-btn-mobile') or contains(@class,'doctor-card-view-profile-btn')]")
-                    );
-                    if (profileBtn.isDisplayed()) {
-                        js.executeScript("arguments[0].click();", profileBtn);
-                        System.out.println("👩‍⚕️ Clicked View Profile...");
-                        Thread.sleep(2000);
-                        closeNewTabAndReturn(parentWindow);
-                    }
-                } catch (Exception e) {
-                    System.out.println("⚠️ No visible View Profile button for card #" + (i + 1));
-                }
-
-                System.out.println("✅ Finished doctor card #" + (i + 1));
-            }
-
-            System.out.println("🎯 All visible doctor cards handled successfully.");
-
-        } catch (Exception e) {
-            System.out.println("❌ Error while handling doctor cards: " + e.getMessage());
+            System.out.println("⚠ Section test skipped: " + e.getMessage());
         }
     }
 
-    /**
-     * Helper – close new tab (if opened) and switch back to parent window
-     */
-    private void closeNewTabAndReturn(String parentWindow) {
+    // ---------------- FAQ ----------------
+    public void testAllFaqAccordions() {
+        List<WebElement> accordions = driver.findElements(By.cssSelector("div.accordion"));
+        for (WebElement acc : accordions) {
+            try {
+                WebElement q = acc.findElement(By.cssSelector(".accordion_head > span"));
+                jsClick(q);
+                Thread.sleep(200);
+            } catch (Exception ignored) {}
+        }
+    }
+
+    // ---------------- TESTIMONIALS ----------------
+    public void scrollToTestimonialsAndClickDots() throws Exception {
+        List<WebElement> dots = driver.findElements(By.cssSelector(".testimonial-dots span.dot"));
+        for (WebElement d : dots) {
+            jsClick(d);
+            Thread.sleep(500);
+        }
+    }
+
+    // ---------------- ARTICLES ----------------
+    public void scrollToLatestHealthArticles(String parentWindow) {
         try {
-            Set<String> allWindows = driver.getWindowHandles();
-            for (String w : allWindows) {
-                if (!w.equals(parentWindow)) {
-                    driver.switchTo().window(w);
-                    System.out.println("🔗 New tab opened → " + driver.getCurrentUrl());
-                    Thread.sleep(1500);
+            List<WebElement> links = driver.findElements(By.cssSelector(".card-title a"));
+            for (int i = 0; i < links.size(); i++) {
+                links = driver.findElements(By.cssSelector(".card-title a"));
+                jsClick(links.get(i));
+                Thread.sleep(900);
+                switchToNewTabAndReturn(parentWindow);
+            }
+        } catch (Exception ignored) {}
+    }
+
+    // ---------------- TAB HANDLER ----------------
+    private void switchToNewTabAndReturn(String parentWindow) {
+        try {
+            for (String h : driver.getWindowHandles()) {
+                if (!h.equals(parentWindow)) {
+                    driver.switchTo().window(h);
+                    Thread.sleep(500);
                     driver.close();
                     driver.switchTo().window(parentWindow);
-                    System.out.println("🔙 Closed new tab and returned to parent.");
                     return;
                 }
             }
-        } catch (Exception e) {
-            System.out.println("⚠️ No new tab detected to close: " + e.getMessage());
-        }
+        } catch (Exception ignored) {}
     }
-    public void clickViewMore(int departmentIndex) {
+    public void handleAllDoctorCards(String parentWindow) {
         try {
-            Actions actions = new Actions(driver);
+            // RESET STATE
+            whatsappClickedCards.clear();
 
-            // Step 0: Hover over Treatments
-            hoverTreatments(actions);
+            // PRIMARY (best)
+            By primaryCardLocator = By.cssSelector("div[class$='-doctor-card']");
 
-            // Step 1: Get department list items dynamically
-            List<WebElement> departments = wait.until(
-                ExpectedConditions.visibilityOfAllElementsLocatedBy(
-                    By.cssSelector("#departments-list li.department___listitem"))
+            // FALLBACK (only if primary finds none)
+            By fallbackCardLocator = By.cssSelector(
+                "div[class*='doctor-card']:not([class$='-doctor-card'])"
             );
 
-            if (departmentIndex >= departments.size()) {
-                throw new RuntimeException("Index " + departmentIndex + " is out of range. Count: " + departments.size());
+            // Start with primary
+            By cardLocator = primaryCardLocator;
+
+            List<WebElement> allCards = driver.findElements(cardLocator);
+            List<WebElement> visibleCards = allCards.stream()
+                    .filter(WebElement::isDisplayed)
+                    .toList();
+
+            System.out.println("➜ Cards found using PRIMARY: " + allCards.size());
+            System.out.println("➜ Visible cards using PRIMARY: " + visibleCards.size());
+
+            // Switch to fallback ONLY if primary yields no visible cards
+            if (visibleCards.isEmpty()) {
+                System.out.println("➜ No visible cards with PRIMARY. Switching to FALLBACK...");
+
+                cardLocator = fallbackCardLocator;
+
+                allCards = driver.findElements(cardLocator);
+                visibleCards = allCards.stream()
+                        .filter(WebElement::isDisplayed)
+                        .toList();
+
+                System.out.println("➜ Cards found using FALLBACK: " + allCards.size());
+                System.out.println("➜ Visible cards using FALLBACK: " + visibleCards.size());
             }
 
-            WebElement departmentItem = departments.get(departmentIndex);
-            String deptName = departmentItem.findElement(By.tagName("span")).getText();
+            if (visibleCards.isEmpty()) {
+                System.out.println("➜ Doctor cards: 0 visible (skipping)");
+                return;
+            }
 
-            // Step 2: Click department
-            departmentItem.click();
-            System.out.println("✅ Selected: " + deptName);
+            System.out.println("➜ Doctor cards (visible): " + visibleCards.size());
 
-            // Step 3: Wait for active right box
-            String activeBoxClass = departmentItem.getAttribute("data-target");
-            By activeBoxLocator = By.cssSelector("div." + activeBoxClass + ".active");
-            WebElement activeBox = wait.until(ExpectedConditions.visibilityOfElementLocated(activeBoxLocator));
+            // Button locators (robust text-based)
+            By bookBtn = By.xpath(".//*[contains(normalize-space(.), 'Book Appointment')]");
+            By profileBtn = By.xpath(".//*[contains(normalize-space(.), 'View Profile')]");
 
-            // Step 4: Scroll + click View More
-            WebElement viewMoreLink = activeBox.findElement(By.cssSelector("div.right__view___more a"));
-            js.executeScript("arguments[0].scrollIntoView({block:'center'})", viewMoreLink);
-            Thread.sleep(300);
+            for (int i = 0; i < visibleCards.size(); i++) {
 
-            actions.moveToElement(viewMoreLink).click().perform();
-            System.out.println("✅ Clicked ‘View More’ for: " + deptName);
+                // Re-fetch each loop to avoid stale DOM issues
+                List<WebElement> freshVisibleCards = driver.findElements(cardLocator)
+                        .stream()
+                        .filter(WebElement::isDisplayed)
+                        .toList();
 
-            // Step 5: Wait for new page to load
-            Thread.sleep(1500);
+                if (i >= freshVisibleCards.size()) break;
 
-            // Step 6: Navigate back to the previous page
-            driver.navigate().back();
-            System.out.println("🔙 Navigated back");
+                WebElement card = freshVisibleCards.get(i);
 
-            // Step 7: Wait for page to load + hover again
-            wait.until(ExpectedConditions.visibilityOfElementLocated(treatmentsMenu));
-            Thread.sleep(700);
+                js.executeScript("arguments[0].scrollIntoView({block:'center'});", card);
+                Thread.sleep(300);
 
-            hoverTreatments(actions);
-            System.out.println("🔁 Hovered Treatments again");
+                System.out.println("➜ Doctor Card #" + (i + 1));
+
+                // Book Appointment once per card
+                if (!whatsappClickedCards.contains(i)) {
+                    clickDoctorButtonVisible(cardLocator, i, bookBtn, parentWindow);
+                    whatsappClickedCards.add(i);
+                }
+
+                Thread.sleep(800);
+
+                // View Profile always
+                clickDoctorButtonVisible(cardLocator, i, profileBtn, parentWindow);
+            }
+
+            System.out.println("✔ Doctor cards processed — returning");
 
         } catch (Exception e) {
-            System.out.println("❌ Error: " + e.getMessage());
-            e.printStackTrace();
+            System.out.println("❌ Doctor card test failed: " + e.getMessage());
         }
     }
 
-    // Helper Method
-    private void hoverTreatments(Actions actions) {
-        WebElement treatmentsMenuElement = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(treatmentsMenu)
+
+    private void clickDoctorButtonVisible(
+            By cardLocator,
+            int visibleIndex,
+            By buttonLocator,
+            String parentWindow
+    ) {
+
+        try {
+            List<WebElement> visibleCards =
+                driver.findElements(cardLocator).stream()
+                      .filter(WebElement::isDisplayed)
+                      .toList();
+
+            if (visibleIndex >= visibleCards.size()) return;
+
+            WebElement card = visibleCards.get(visibleIndex);
+            WebElement targetElement = null;
+
+            String actionText =
+                buttonLocator.toString().contains("Book Appointment")
+                    ? "Book Appointment"
+                    : "View Profile";
+
+            /* ===============================
+               IF–ELSE: BUTTON → ELSE SPAN
+               =============================== */
+
+            // IF <button>Action</button>
+            List<WebElement> buttons = card.findElements(
+                By.xpath(".//button[normalize-space()='" + actionText + "']")
+            );
+
+            if (!buttons.isEmpty()) {
+                targetElement = buttons.get(0);
+            }
+
+            // ELSE IF <span>Action</span>
+            else {
+                List<WebElement> spans = card.findElements(
+                    By.xpath(".//span[normalize-space()='" + actionText + "']")
+                );
+
+                if (!spans.isEmpty()) {
+                    targetElement = spans.get(0);
+                }
+            }
+
+            if (targetElement == null) return;
+
+            /* ===============================
+               TAB HANDLING — UNCHANGED
+               =============================== */
+
+            String returnUrl = driver.getCurrentUrl();
+            Set<String> beforeHandles = driver.getWindowHandles();
+
+            js.executeScript(
+                "arguments[0].scrollIntoView({block:'center'});",
+                targetElement
+            );
+            Thread.sleep(200);
+            jsClick(targetElement);
+
+            String newTab = waitForNewTab(beforeHandles, 6);
+
+            if (newTab != null) {
+                driver.switchTo().window(newTab);
+                Thread.sleep(600);
+                driver.close();
+                driver.switchTo().window(parentWindow);
+                wait.until(ExpectedConditions.urlToBe(returnUrl));
+            } else {
+                if (!driver.getCurrentUrl().equals(returnUrl)) {
+                    driver.get(returnUrl);
+                    wait.until(ExpectedConditions.urlToBe(returnUrl));
+                }
+            }
+
+            wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(cardLocator));
+
+        } catch (Exception e) {
+            System.out.println("⚠ Doctor button failed: " + e.getMessage());
+        }
+    }
+
+    private void resetToTreatmentsContext() {
+
+        // Force clean state (IMPORTANT)
+        driver.get("https://luxhospitals.com/");
+
+        // Wait until Treatments menu is visible
+        wait.until(ExpectedConditions.visibilityOfElementLocated(
+            By.linkText("Treatments")
+        ));
+
+        // Restore hover state
+//        hoverOverTreatments();
+    }
+
+    private void hoverAndHighlight(By locator) {
+        WebElement el = wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+
+        // Hover
+        new Actions(driver)
+            .moveToElement(el)
+            .pause(Duration.ofMillis(400))
+            .perform();
+
+        // Visual highlight (debug aid)
+        js.executeScript(
+            "arguments[0].style.outline='3px solid #8e44ad';" +
+            "arguments[0].style.backgroundColor='#f5e6ff';",
+            el
         );
 
-        actions.moveToElement(treatmentsMenuElement)
-                .pause(Duration.ofMillis(500))
-                .perform();
-
-        System.out.println("🟩 Hovered ‘Treatments’");
+        try { Thread.sleep(400); } catch (InterruptedException ignored) {}
     }
+    private void clickDepartmentByName(String name) {
+
+        hoverOverTreatments(); // ALWAYS reopen dropdown
+
+        List<WebElement> depts = driver.findElements(departments);
+
+        for (WebElement d : depts) {
+
+            WebElement label =
+                d.findElement(By.cssSelector("span"));
+
+            if (label.getText().trim().equalsIgnoreCase(name)) {
+
+                WebElement box =
+                    d.findElement(By.cssSelector(".flexx___box"));
+
+                highlight(box);
+                jsClick(box);
+
+                wait.until(
+                    ExpectedConditions.visibilityOfElementLocated(activeDepartmentBox)
+                );
+
+                System.out.println("➡ Highlighted Department: " + name);
+                return;
+            }
+        }
+
+        throw new RuntimeException("Department not found: " + name);
+    }
+    private void clickSubDepartmentByName(String name) {
+
+        List<WebElement> subs =
+            driver.findElements(activeSubDepartments);
+
+        for (WebElement s : subs) {
+
+            WebElement label = s.findElement(By.tagName("p"));
+
+            if (label.getText().trim().equalsIgnoreCase(name)) {
+
+                highlight(s);
+
+                String beforeUrl = driver.getCurrentUrl();
+                jsClick(s);
+
+                wait.until(
+                    ExpectedConditions.not(
+                        ExpectedConditions.urlToBe(beforeUrl)
+                    )
+                );
+
+                System.out.println("   ➜ Highlighted Sub-department: " + name);
+                return;
+            }
+        }
+
+        throw new RuntimeException("Sub-department not found: " + name);
+    }
+    private void handleBookAppointment(String parentWindow) {
+
+        List<WebElement> buttons = driver.findElements(bookAppointmentBtn);
+
+        if (buttons.isEmpty()) {
+            System.out.println("     ➜ Book Appointment not present");
+            return;
+        }
+
+        WebElement button = buttons.get(0);
+        highlight(button);
+
+        String returnUrl = driver.getCurrentUrl();
+        Set<String> beforeHandles = driver.getWindowHandles();
+
+        jsClick(button);
+
+        // ⏳ Wait for JS / redirect / tab
+        try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
+
+        Set<String> afterHandles = driver.getWindowHandles();
+
+        // 🟢 CASE 1: New tab
+        if (afterHandles.size() > beforeHandles.size()) {
+
+            afterHandles.removeAll(beforeHandles);
+            String newTab = afterHandles.iterator().next();
+
+            driver.switchTo().window(newTab);
+            try { Thread.sleep(800); } catch (InterruptedException ignored) {}
+            driver.close();
+            driver.switchTo().window(parentWindow);
+
+            driver.get(returnUrl); // 🔒 HARD RESET
+            wait.until(ExpectedConditions.urlToBe(returnUrl));
+
+            System.out.println("     ✔ Book Appointment → new tab closed & reset");
+            return;
+        }
+
+        // 🔵 CASE 2: Same tab redirect
+        if (!driver.getCurrentUrl().equals(returnUrl)) {
+
+            driver.get(returnUrl); // 🔒 FORCE reset (not back)
+            wait.until(ExpectedConditions.urlToBe(returnUrl));
+
+            System.out.println("     ✔ Book Appointment → same tab reset");
+            return;
+        }
+
+        // 🟡 CASE 3: JS tries again (block it)
+        js.executeScript(
+            "document.querySelectorAll('a.triger-carecansole').forEach(e => e.onclick = null);"
+        );
+
+        System.out.println("     ✔ Book Appointment → JS trigger disabled");
+    }
+    private void highlight(WebElement element) {
+
+        js.executeScript(
+            "arguments[0].style.outline='3px solid #ff5722';" +
+            "arguments[0].style.background='rgba(255,87,34,0.15)';" +
+            "arguments[0].style.transition='all 0.2s ease';",
+            element
+        );
+
+        try { Thread.sleep(600); } catch (InterruptedException ignored) {}
+    }
+
+    private void clearHighlight(WebElement element) {
+        js.executeScript(
+            "arguments[0].style.outline='';" +
+            "arguments[0].style.backgroundColor='';",
+            element
+        );
+    }
+    private List<WebElement> getVisibleUniqueDoctorCards() {
+
+        // View Profile links are the best unique doctor identifier on your pages
+        By profileLinks = By.xpath("//a[contains(@href,'/doctors/') and @target='_blank']");
+
+        List<WebElement> links = driver.findElements(profileLinks);
+
+        // Use LinkedHashMap to keep order + dedupe by href
+        Map<String, WebElement> uniqueCards = new LinkedHashMap<>();
+
+        for (WebElement a : links) {
+            try {
+                if (!a.isDisplayed()) continue;
+
+                String href = a.getAttribute("href");
+                if (href == null || href.isBlank()) continue;
+
+                // Find the nearest container that looks like a doctor card block
+                WebElement card = a.findElement(By.xpath(
+                    "ancestor::div[" +
+                    "contains(@class,'doctor-card') or " +
+                    "contains(@class,'-doctor-card') or " +
+                    "contains(@class,'abishek-katha-doctor-card') or " +
+                    "contains(@class,'samhitha-reddy-doctor-card')" +
+                    "][1]"
+                ));
+
+                if (card != null && card.isDisplayed()) {
+                    uniqueCards.putIfAbsent(href, card); // ✅ dedupe by doctor profile url
+                }
+
+            } catch (Exception ignored) {}
+        }
+
+        return new ArrayList<>(uniqueCards.values());
+    }
+
 
 
 }

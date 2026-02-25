@@ -21,17 +21,31 @@
             <artifactId>selenium-java</artifactId>
             <version>4.25.0</version>
         </dependency>
+        
+        <dependency>
+    <groupId>org.testng</groupId>
+    <artifactId>testng</artifactId>
+    <version>7.9.0</version>  <!-- or whichever version you prefer -->
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.seleniumhq.selenium</groupId>
+    <artifactId>selenium-chrome-driver</artifactId>
+    <version>4.25.0</version>  <!-- use the same version as selenium-java -->
+</dependency>
         <dependency>
     <groupId>io.github.bonigarcia</groupId>
     <artifactId>webdrivermanager</artifactId>
     <version>5.7.0</version>
 </dependency>
+<dependency>
+  <groupId>com.microsoft.playwright</groupId>
+  <artifactId>playwright</artifactId>
+  <version>1.42.0</version>
+</dependency>
 
-        <dependency>
-        	<groupId>org.example</groupId>
-        	<artifactId>GutCareTest</artifactId>
-        	<version>1.0-SNAPSHOT</version>
-        </dependency>
+
+      
     </dependencies>
     
 

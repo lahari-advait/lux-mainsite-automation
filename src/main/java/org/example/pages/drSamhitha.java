@@ -15,28 +15,32 @@ public class drSamhitha {
 
     // ✅ Single flow: homepage -> profile -> book appointment (stays on child)
     public void openProfileAndBookAppointment() throws InterruptedException {
-//        allDoctorCards.openHomePage();
 
-        // ✅ Capture parent window handle BEFORE opening any new tab
         parentWindow = driver.getWindowHandle();
 
         allDoctorCards.openDoctorsPage();
         allDoctorCards.viewDoctorProfile("Dr. Samhitha Reddy");
 
-        // Switch to doctor profile (child tab)
-        allDoctorCards.switchToNewWindow();
+        // ⭐ Switch to new profile tab
+        String profileTab = allDoctorCards.switchToNewWindow();
 
-        // Click Book Appointment (opens WhatsApp tab, closes it, stays on child)
+        // ⭐ You are now ON the profile tab — you should remain here
         allDoctorCards.clickBookAppointmentAndCloseWhatsApp();
+
+        // ⭐ Only close when YOU want:
+        // driver.close();
+        // driver.switchTo().window(parentWindow);
     }
+
+
 
     public void viewTestimonials() throws InterruptedException {
         allDoctorCards.scrollToTestimonialsAndClickDots();
     }
 
-    public void switchToNewWindow1() {
-        allDoctorCards.switchToNewWindow();
-    }
+//    public void switchToNewWindow1() {
+//        allDoctorCards.switchToNewWindow();
+//    }
 
     
     public void closeCurrentWindowAndSwitchBack1() {

@@ -11,7 +11,8 @@ import java.time.Duration;
 import java.util.*;
 
 public class homePage {
-    private static WebDriver driver;
+     WebDriver driver;
+    
     private static WebDriverWait wait;
     private static Actions actions;
 
@@ -159,7 +160,7 @@ public class homePage {
             Assert.assertTrue(status3, "❌ Insurance link failed");
 
             driver.navigate().back();
-            
+            removeHighlight1(forPatients);
             wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//a[normalize-space()='Doctors']")));
 
             // 4️⃣ About Us → Hover only, verify dropdown visible
@@ -318,10 +319,16 @@ public class homePage {
                 System.out.println("\n------------------------------------------------------");
                 System.out.println("🖱️ STEP " + (i + 1) + " — Testing Sticky CTA #" + (i + 1));
 
-                WebElement stickyButton = stickyButtons.get(i);
+             // RE-FIND the element to avoid stale element
+                WebElement stickyButton = wait.until(
+                        ExpectedConditions.presenceOfAllElementsLocatedBy(
+                                By.className("mobile-stickey-icon-container")
+                        )).get(i);
 
+                // Safe actions
                 scrollIntoView(stickyButton);
                 highlight(stickyButton);
+
                 Thread.sleep(600);
 
                 // 📌 Capture current state
@@ -606,6 +613,7 @@ public class homePage {
                 }
             }
 
+            
             removeHighlight1(element);
             Thread.sleep(2000);
 
@@ -644,6 +652,7 @@ public class homePage {
             LinkedHashSet<String> departmentNames = new LinkedHashSet<>();
             for (WebElement card : initialCards) {
                 try {
+                	
                     departmentNames.add(card.findElement(By.tagName("h2")).getText().trim());
                 } catch (Exception ignored) {}
             }
@@ -727,9 +736,9 @@ public class homePage {
     }
 
 
-    public static void testDoctorProfiles() throws InterruptedException {
+    public void testDoctorProfiles() throws InterruptedException {
         try {
-            JavascriptExecutor js = (JavascriptExecutor) driver;
+          JavascriptExecutor js = (JavascriptExecutor) driver;
 
             WebElement doctorHeading = wait.until(ExpectedConditions.visibilityOfElementLocated(
                 By.xpath("//h2[contains(text(),'Our Top Doctors')]")
@@ -745,7 +754,7 @@ public class homePage {
             int totalDoctors = buttons.size();
             System.out.println("🔹 Found " + totalDoctors + " doctor profile buttons");
 
-            for (int i = 0; i < totalDoctors && i < 10; i++) {
+            for (int i = 0; i < totalDoctors && i < 12; i++) {
                 // Re-locate fresh button each time
                 List<WebElement> freshButtons = driver.findElements(buttonSelector);
                 WebElement btn = freshButtons.get(i);
@@ -782,79 +791,173 @@ public class homePage {
         }
     }
     public void testPatientTalksDots() throws InterruptedException {
-        String testCaseId = "TC108";
-        String feature = "Patient Talks Carousel";
-        String description = "Verify each dot in the 'Patients love us' carousel activates correctly.";
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        Actions actions = new Actions(driver);
 
-        System.out.println("\n======================================================");
-        System.out.println("🧾 TEST CASE ID: " + testCaseId);
-        System.out.println("📂 FEATURE: " + feature);
-        System.out.println("🎯 DESCRIPTION: " + description);
-        System.out.println("======================================================\n");
+        // Scroll to section
+        WebElement heading = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                By.xpath("//h2[text()='Patients love us']")));
+        js.executeScript("arguments[0].scrollIntoView({block:'center'});", heading);
+        Thread.sleep(1200);
 
-        try {
-            JavascriptExecutor js = (JavascriptExecutor) driver;
+        // Hover to trigger JS lazy load
+        WebElement container = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                By.cssSelector(".patient-carousel-section")));
+        actions.moveToElement(container).perform();
+        Thread.sleep(2000);
 
-            // STEP 1: Scroll to section once
-            WebElement heading = wait.until(ExpectedConditions.visibilityOfElementLocated(
-                    By.xpath("//h2[text()='Patients love us']")));
-            js.executeScript("arguments[0].scrollIntoView({block:'center'});", heading);
+        // Retrieve ONLY the JS-generated dots
+        List<WebElement> dots = (List<WebElement>) js.executeScript(
+                "return Array.from(document.querySelectorAll('.patienttalks-dots-container .patienttalks-dot'))");
+        
+        if (dots.size() == 0)
+            throw new RuntimeException("Dynamic dots did not load.");
+
+        System.out.println("Detected dynamic dots: " + dots.size());
+
+        // Click each dot using real pointer events
+        for (int i = 0; i < dots.size(); i++) {
+            WebElement dot = dots.get(i);
+
+            js.executeScript(
+                "arguments[0].dispatchEvent(new PointerEvent('pointerdown', {bubbles:true}));" +
+                "arguments[0].dispatchEvent(new PointerEvent('pointerup', {bubbles:true}));" +
+                "arguments[0].dispatchEvent(new MouseEvent('click', {bubbles:true, cancelable:true}));",
+                dot
+            );
+
             Thread.sleep(1200);
 
-            // STEP 2: Locate dot container
-            WebElement dotsContainer = wait.until(ExpectedConditions.visibilityOfElementLocated(
-                    By.cssSelector(".patienttalks-dots-container")));
+            // Verify active state
+            boolean active = (Boolean) js.executeScript(
+                "return arguments[0].classList.contains('active');", dot);
 
-            List<WebElement> dots = dotsContainer.findElements(By.cssSelector(".patienttalks-dot"));
-
-            System.out.println("🔹 Total PatientTalks dots found: " + dots.size());
-
-            // STEP 3: Loop through each dot
-            for (int i = 0; i < dots.size(); i++) {
-
-                System.out.println("\n------------------------------------------------------");
-                System.out.println("▶️ VALIDATING DOT #" + (i + 1));
-
-                // REFRESH dots list every iteration to avoid stale elements
-                dots = dotsContainer.findElements(By.cssSelector(".patienttalks-dot"));
-                WebElement dot = dots.get(i);
-
-                String index = dot.getAttribute("data-index");
-
-                // Scroll only if not visible
-                js.executeScript(
-                        "var r = arguments[0].getBoundingClientRect();" +
-                        "if(r.top < 0 || r.bottom > window.innerHeight) " +
-                        "{ arguments[0].scrollIntoView({block:'center'}); }",
-                        dot
-                );
-                Thread.sleep(500);
-
-                // Safe JS click
-                js.executeScript("arguments[0].click();", dot);
-                Thread.sleep(1200); // wait for animation to complete
-
-                // VERIFY ACTIVE STATE
-                boolean isActive = dot.getAttribute("class").contains("active");
-
-                if (isActive) {
-                    System.out.println("✅ Dot " + index + " is active after click");
-                } else {
-                    System.out.println("❌ Dot " + index + " did NOT become active");
-                }
-            }
-
-            System.out.println("\n🎉 " + testCaseId + " PASSED — All dots verified successfully!");
-
-        } catch (Exception e) {
-            System.out.println("❌ " + testCaseId + " FAILED: " + e.getMessage());
-            Assert.fail("PatientTalks dots test failed: " + e.getMessage());
+            System.out.println(active ?
+                    "✔ Dot " + i + " activated" :
+                    "✘ Dot " + i + " did NOT activate");
         }
-
-        System.out.println("\n======================================================");
-        System.out.println("🏁 END OF TEST CASE: " + testCaseId);
-        System.out.println("======================================================\n");
     }
+
+//    public void testPatientTalksDots() throws InterruptedException {
+//
+//        String testCaseId = "TC108";
+//        String feature = "Patient Talks Carousel";
+//        String description = "Verify each dot in the 'Patients love us' carousel activates correctly.";
+//
+//        System.out.println("\n======================================================");
+//        System.out.println("TEST CASE: " + testCaseId);
+//        System.out.println("FEATURE: " + feature);
+//        System.out.println("DESCRIPTION: " + description);
+//        System.out.println("======================================================\n");
+//
+//        try {
+//
+//            JavascriptExecutor js = (JavascriptExecutor) driver;
+//            Actions actions = new Actions(driver);
+//
+//            // -----------------------------------------------------
+//            // STEP 1 — Locate slider section (NO SCROLL AT ALL)
+//            // -----------------------------------------------------
+//            WebElement section = wait.until(
+//                    ExpectedConditions.presenceOfElementLocated(
+//                            By.cssSelector(".patient-carousel-section"))
+//            );
+//
+//            // -----------------------------------------------------
+//            // STEP 2 — Move cursor to ABSOLUTE viewport coordinates
+//            // (bypasses Elementor's on-scroll handlers)
+//            // -----------------------------------------------------
+//            Rectangle rect = section.getRect();
+//
+//            int viewportX = rect.x + rect.width / 2;
+//            int viewportY = rect.y + 40;  // slight inside movement
+//
+//            actions.moveByOffset(viewportX, viewportY).perform();
+//            System.out.println("🖱 Cursor moved directly to slider location (no scroll)");
+//            Thread.sleep(1500);  // wait for lazy loading
+//
+//
+//            // -----------------------------------------------------
+//            // STEP 3 — Wait for dynamic dots to appear
+//            // -----------------------------------------------------
+//            List<WebElement> dots = new ArrayList<>();
+//            int retries = 0;
+//
+//            while (retries < 25) { // up to ~7 seconds
+//                dots = driver.findElements(
+//                        By.cssSelector(".patienttalks-dots-container .patienttalks-dot")
+//                );
+//                if (dots.size() > 0) break;
+//
+//                Thread.sleep(300);
+//                retries++;
+//            }
+//
+//            if (dots.size() == 0)
+//                throw new Exception("Dynamic dots did NOT load after cursor hover.");
+//
+//            System.out.println("🔹 Dynamic dots detected: " + dots.size());
+//
+//
+//            // -----------------------------------------------------
+//            // STEP 4 — Validate each dot WITHOUT SCROLLING
+//            // -----------------------------------------------------
+//            for (int i = 0; i < dots.size(); i++) {
+//
+//                System.out.println("\n--------------------------------------");
+//                System.out.println("👉 VALIDATING DOT #" + i);
+//
+//                dots = driver.findElements(
+//                        By.cssSelector(".patienttalks-dots-container .patienttalks-dot")
+//                );
+//                WebElement dot = dots.get(i);
+//
+//                // Move cursor exactly onto dot WITHOUT scrolling
+//                Rectangle drect = dot.getRect();
+//                actions.moveByOffset(drect.x + 5, drect.y + 5).perform();
+//                Thread.sleep(300);
+//
+//                // Real pointer events -> slider listens for them
+//                js.executeScript(
+//                        "arguments[0].dispatchEvent(new PointerEvent('pointerdown', {bubbles:true}));" +
+//                        "arguments[0].dispatchEvent(new PointerEvent('pointerup', {bubbles:true}));" +
+//                        "arguments[0].dispatchEvent(new MouseEvent('click', {bubbles:true, cancelable:true}));",
+//                        dot
+//                );
+//
+//                Thread.sleep(1200);
+//
+//                dots = driver.findElements(
+//                        By.cssSelector(".patienttalks-dots-container .patienttalks-dot")
+//                );
+//                dot = dots.get(i);
+//
+//                boolean active = (Boolean) js.executeScript(
+//                        "return arguments[0].classList.contains('active');",
+//                        dot
+//                );
+//
+//                if (active)
+//                    System.out.println("✅ Dot " + i + " activated successfully");
+//                else
+//                    System.out.println("❌ Dot " + i + " FAILED to activate");
+//            }
+//
+//
+//            System.out.println("\n🎉 TEST PASSED — All dots validated successfully!");
+//
+//        } catch (Exception e) {
+//            System.out.println("❌ TEST FAILED: " + e.getMessage());
+//            Assert.fail("TC108 FAILED — " + e.getMessage());
+//        }
+//
+//        System.out.println("\n======================================================");
+//        System.out.println("END OF TEST CASE " + testCaseId);
+//        System.out.println("======================================================\n");
+//    }
+//
+
+
 
     
     public void testLuxGPT() throws InterruptedException {
@@ -885,7 +988,7 @@ public class homePage {
 
             input.clear();
             js.executeScript("arguments[0].click();", sendButton);
-            Thread.sleep(500);
+            Thread.sleep(1000);
 
             // HANDLE JS ALERT QUICKLY
             try {
@@ -897,7 +1000,7 @@ public class homePage {
                 System.out.println("ℹ No alert appeared for negative test.");
             }
 
-            Thread.sleep(1000); // Let the UI settle
+            Thread.sleep(2000); // Let the UI settle
 
             // --------------------------------------------
             //  POSITIVE TEST – VALID MESSAGE
@@ -913,7 +1016,7 @@ public class homePage {
 
             input = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("messageInput")));
             input.clear();
-            Thread.sleep(400);
+            Thread.sleep(1000);
 
             String message = "This is a test message";
             input.sendKeys(message);
@@ -951,26 +1054,28 @@ public class homePage {
         System.out.println("\n==========================================");
     }
 
-    public void testArticles() throws InterruptedException {
+    public void testArticles() {
         String testCaseId = "TC110";
 
         try {
             System.out.println("\n============== TC110: Health Articles ==============\n");
 
+            Actions actions = new Actions(driver);
             JavascriptExecutor js = (JavascriptExecutor) driver;
 
-            // Scroll to section heading once
+            // Wait for the heading to appear and scroll to it
             WebElement heading = wait.until(ExpectedConditions.visibilityOfElementLocated(
-                    By.xpath("//h2[contains(text(),'Latest Health Articles')]")
+                    By.xpath("//h2[contains(.,'Latest Health Articles')]")
             ));
-            scrollIntoView(heading);
-            Thread.sleep(1000);
 
+            actions.moveToElement(heading).perform();
             System.out.println("📌 Reached 'Latest Health Articles' section");
 
             String parentWindow = driver.getWindowHandle();
 
-            // Get number of articles (don't store elements → avoid stale)
+            // Wait for article titles to load
+            wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector(".card-title a")));
+
             int totalArticles = driver.findElements(By.cssSelector(".card-title a")).size();
             System.out.println("📰 Total Articles Found: " + totalArticles);
 
@@ -979,25 +1084,27 @@ public class homePage {
                 System.out.println("\n--------------------------------------------------");
                 System.out.println("➡ Testing Article #" + (i + 1));
 
-                // Re-fetch element fresh each loop
-                List<WebElement> titles = wait.until(
-                        ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector(".card-title a"))
-                );
-                WebElement article = titles.get(i);
+                // Fetch fresh list (prevents stale element)
+                List<WebElement> articles = driver.findElements(By.cssSelector(".card-title a"));
+                WebElement article = articles.get(i);
 
-                scrollIntoView(article);
+                // Scroll article into view
+                js.executeScript("arguments[0].scrollIntoView({block:'center'});", article);
+                actions.moveToElement(article).pause(Duration.ofMillis(400)).perform();
+
                 highlight(article);
-                Thread.sleep(500);
 
                 String oldUrl = driver.getCurrentUrl();
                 Set<String> oldTabs = driver.getWindowHandles();
 
-                // Safe JS click
+                // Safe JS click for dynamic carousel items
                 js.executeScript("arguments[0].click();", article);
-                System.out.println("🖱 Clicked Article #" + (i + 1));
-                Thread.sleep(2000);
 
-                // Detect new tab
+                System.out.println("🖱 Clicked Article #" + (i + 1));
+
+                // Wait for navigation OR new tab
+                wait.until(driverInstance -> driverInstance.getWindowHandles().size() >= oldTabs.size());
+
                 Set<String> newTabs = driver.getWindowHandles();
                 newTabs.removeAll(oldTabs);
 
@@ -1005,33 +1112,38 @@ public class homePage {
                     // NEW TAB OPENED
                     String newTab = newTabs.iterator().next();
                     driver.switchTo().window(newTab);
-                    Thread.sleep(1200);
 
                     System.out.println("🌍 Opened in NEW tab: " + driver.getCurrentUrl());
 
-                    driver.close(); // Close article
+                    driver.close();
                     driver.switchTo().window(parentWindow);
 
                 } else {
-                    // SAME TAB NAVIGATION
+                    // NAVIGATED IN SAME TAB
+                    wait.until(ExpectedConditions.urlContains("http"));
                     String newUrl = driver.getCurrentUrl();
 
                     if (!newUrl.equals(oldUrl)) {
                         System.out.println("↪ Navigated in SAME tab: " + newUrl);
 
                         driver.navigate().back();
-                        Thread.sleep(2000);
 
+                        wait.until(ExpectedConditions.visibilityOfElementLocated(
+                            By.xpath("//h2[contains(.,'Latest Health Articles')]")
+                        ));
                     } else {
                         System.out.println("⚠ No navigation occurred!");
                     }
                 }
 
                 removeHighlight1(article);
-                Thread.sleep(1200);
+
+                // Move the mouse away slightly to prevent hover issues
+                actions.moveByOffset(0, -150).perform();
             }
 
             System.out.println("\n🎉 TC110 PASSED — All health articles validated successfully!");
+
         } catch (Exception e) {
             System.out.println("❌ TC110 FAILED: " + e.getMessage());
             Assert.fail("Health Articles section failed: " + e.getMessage());
@@ -1039,6 +1151,8 @@ public class homePage {
 
         System.out.println("\n======================================================\n");
     }
+
+    
 
     // ==========================
     // FAQ ACCORDIONS TEST
@@ -1138,7 +1252,7 @@ public class homePage {
         ((JavascriptExecutor) driver).executeScript("arguments[0].style.border='none';", el);
     }
 
-    private static void scrollIntoView(WebElement el) {
+    private  void scrollIntoView(WebElement el) {
         ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block:'center'});", el);
     }
 
@@ -1184,79 +1298,111 @@ public class homePage {
     }
     public void testFooterLinks() throws Exception {
 
+        driver.manage().window().setSize(new Dimension(1440, 900));
         driver.get("https://luxhospitals.com/");
         Thread.sleep(2500);
 
         String mainWindow = driver.getWindowHandle();
+        JavascriptExecutor js = (JavascriptExecutor) driver;
 
         scrollToFooter();
         Thread.sleep(1500);
 
-        // ONLY FOOTER LINKS — FIXED SELECTOR
-        List<WebElement> footerLinks = driver.findElements(
-                By.cssSelector("div[data-id='b3a03d4'] a")
+        // 1️⃣ Collect ONLY visible footer links
+        List<WebElement> allLinks = driver.findElements(
+                By.cssSelector(".lux-footer-desktop a[href]")
         );
 
-        List<String> hrefList = new ArrayList<>();
-        Set<String> unique = new HashSet<>();
+        List<WebElement> visibleLinks = new ArrayList<>();
 
-        // COLLECT URLS IN ORDER (TOP->BOTTOM LEFT->RIGHT)
-        for (WebElement link : footerLinks) {
+        for (WebElement link : allLinks) {
             try {
-                String href = link.getAttribute("href");
-                if (href == null || href.isEmpty()) continue;
-                if (!link.isDisplayed()) continue;     
-                if (unique.contains(href)) continue;
-                unique.add(href);
-                hrefList.add(href);
+                if (link.isDisplayed()) {
+                    visibleLinks.add(link);
+                }
             } catch (Exception ignored) {}
         }
 
-        System.out.println("FOOTER LINKS FOUND: " + hrefList.size());
+        System.out.println("VISIBLE FOOTER LINKS FOUND: " + visibleLinks.size());
 
-        // CLICK EACH LINK IN VISUAL ORDER
-        for (int i = 0; i < hrefList.size(); i++) {
-
-            String href = hrefList.get(i);
-            System.out.println("Clicking " + (i+1) + "/" + hrefList.size() + " : " + href);
+        // 2️⃣ Click each visible link in order
+        for (int i = 0; i < visibleLinks.size(); i++) {
 
             scrollToFooter();
             Thread.sleep(1000);
 
-            try {
-                WebElement link = driver.findElement(By.cssSelector("div[data-id='b3a03d4'] a[href='" + href + "']"));
+            // Re-fetch to avoid stale element
+            List<WebElement> refreshedLinks = driver.findElements(
+                    By.cssSelector(".lux-footer-desktop a[href]")
+            );
 
-                scrollIntoView(link);
-                Thread.sleep(500);
+            WebElement link = refreshedLinks.get(i);
+            String href = link.getAttribute("href");
 
-                Set<String> oldWindows = driver.getWindowHandles();
-                link.click();
-                Thread.sleep(2500);
+            System.out.println(
+                    "Clicking " + (i + 1) + "/" + visibleLinks.size() + " : " + href
+            );
 
-                Set<String> newWindows = driver.getWindowHandles();
+            scrollIntoView(link);
+            Thread.sleep(400);
 
-                // OPENED NEW TAB?
-                if (newWindows.size() > oldWindows.size()) {
-                    for (String w : newWindows) {
-                        if (!oldWindows.contains(w)) {
-                            driver.switchTo().window(w);
-                            break;
-                        }
+            // 🔴 Highlight
+            js.executeScript(
+                    "arguments[0].style.border='3px solid red'", link
+            );
+            Thread.sleep(600);
+
+            Set<String> oldWindows = driver.getWindowHandles();
+            link.click();
+            Thread.sleep(3000);
+
+            Set<String> newWindows = driver.getWindowHandles();
+
+            if (newWindows.size() > oldWindows.size()) {
+                for (String w : newWindows) {
+                    if (!oldWindows.contains(w)) {
+                        driver.switchTo().window(w);
+                        break;
                     }
-                    driver.close();
-                    driver.switchTo().window(mainWindow);
-                } else {
-                    driver.navigate().back();
                 }
-
-            } catch (Exception e) {
-                System.out.println("FAILED clicking " + href + " -> " + e.getMessage());
+                Thread.sleep(2000);
+                driver.close();
                 driver.switchTo().window(mainWindow);
+            } else {
+                Thread.sleep(2000);
+                driver.navigate().back();
+                Thread.sleep(2500);
             }
+
+            // 🧹 Remove highlight
+            try {
+                js.executeScript(
+                        "arguments[0].style.border=''", link
+                );
+            } catch (Exception ignored) {}
         }
 
-        System.out.println("ALL FOOTER LINKS DONE.");
+        System.out.println("ALL 53 FOOTER LINKS DONE.");
     }
+
+//    private void safeCloseTab(String mainWindow) {
+//        try {
+//            String currentHandle = driver.getWindowHandle();
+//            if (!currentHandle.equals(mainWindow)) {
+//                driver.close();
+//            }
+//            if (!driver.getWindowHandles().contains(mainWindow)) {
+//                // main window is gone – pick any available window to keep framework alive
+//                Optional<String> any = driver.getWindowHandles().stream().findFirst();
+//                any.ifPresent(driver::switchTo);
+//            } else {
+//                driver.switchTo().window(mainWindow);
+//            }
+//        } catch (Exception e) {
+//            System.out.println("⚠ safeCloseTab error: " + e.getMessage());
+//        }
+//    }
+    
     private void scrollToFooter() {
         try {
             WebElement footer = driver.findElement(By.cssSelector("div[data-id='b3a03d4']"));

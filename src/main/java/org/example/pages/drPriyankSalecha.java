@@ -21,7 +21,7 @@ public class drPriyankSalecha {
         parentWindow = driver.getWindowHandle();
 
         allDoctorCards.openDoctorsPage();
-        allDoctorCards.viewDoctorProfile("Dr. Priyank Salecha");
+        allDoctorCards.viewDoctorProfile("Dr. Priyank  Salecha");
 
         // Switch to doctor profile (child window)
         allDoctorCards.switchToNewWindow();

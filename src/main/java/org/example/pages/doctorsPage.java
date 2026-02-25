@@ -101,7 +101,9 @@ public class doctorsPage {
                         driver.switchTo().window(w);
                         wait.until(d -> ((JavascriptExecutor) d)
                             .executeScript("return document.readyState").equals("complete"));
+                        Thread.sleep(1000);
                         driver.close();
+                        Thread.sleep(1000);
                         driver.switchTo().window(originalWindow);
                         System.out.println("🔙 Closed new tab after: " + label);
                         break;
@@ -117,13 +119,16 @@ public class doctorsPage {
         }
     }
  // ✅ Click "View Profile" and handle new tab
-    public void clickViewProfile(WebElement card, String doctorName) {
+    public void clickViewProfile(WebElement card, String doctorName) throws InterruptedException {
         clickDoctorButton(card, doctorName, "viewProfile");
+        Thread.sleep(1000);
+        
     }
 
     // ✅ Click "Book Appointment" and handle new tab
-    public void clickBookAppointment(WebElement card, String doctorName) {
+    public void clickBookAppointment(WebElement card, String doctorName) throws InterruptedException {
         clickDoctorButton(card, doctorName, "bookAppointment");
+        Thread.sleep(1000);
     }
 
     // ✅ Generic method to click doctor buttons (View Profile / Book Appointment)

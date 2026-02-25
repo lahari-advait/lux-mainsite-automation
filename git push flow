@@ -1,0 +1,5 @@
+First move to the current working folder  -- cd <<path>>
+
+for add files - git add .
+for commit message - git commit -m "add your commit"
+for push - git push origin main
